@@ -1,0 +1,2960 @@
+% !TEX program = xelatex
+% !TEX encoding = UTF-8 Unicode
+%
+% Introduction to Control Engineering -- lecture notes (English), Fall 2026
+% One continuous document; new lectures are folded into the existing sections.
+% Everything shared with the Korean edition lives in controlnotes.sty.
+% Compile:  xelatex control_notes_EN.tex   (three times, for the table of
+%           contents -- publish.sh does that for you)
+%
+% Rules for what comes next:
+%   1. New lecture material is folded into the section of the Part whose topic
+%      it belongs to; it is not appended as a new chapter.
+%   2. If a lecture opens a genuinely new topic, open a new Part with
+%      \partdivider.  Section numbers run on -- they are not reset.
+%   3. Put a \lecturebreak where that lecture's new material begins, and add
+%      one row to the lecture table in the front matter pointing at the same
+%      place.  (lectures.py reads the LAST row of the Korean edition's table to
+%      build the manifest's `lectures' field.)
+%   4. In "The arc of the course", move the Part concerned to in progress or
+%      done; and list a planned item only where there is evidence for it --
+%      the plan as the lectures themselves stated it.
+%   5. The Part, section and label structure of the two editions is 1:1.
+%
+\documentclass[11pt]{article}
+\usepackage{controlnotes}
+
+%% ---- masthead fields ------------------------------------------------------
+%% \lectitle is the old title block's "Lecture notes" plus the range of the
+%% lecture/section table below; the term and the date are the other two pieces
+%% of the line that used to sit under the author.  \lecnum and \lecturer stay
+%% empty: this is one continuous document and no lecturer is named in it.
+\coursename{Introduction to Control Engineering}
+\term{Fall 2026}
+\lectitle{Lecture Notes: Lectures 1--10}
+\lecdate{Last updated 10 October 2026}
+\scribe{Suhan Woo}
+
+\begin{document}
+\makelecheader
+
+\section*{The arc of the course}
+
+In the first lecture the course was laid out in three stages: first
+\emph{modelling} dynamical systems --- by transfer functions and in state-variable
+form --- and learning to \emph{analyse} the models; then a middle stretch that
+leans on linear algebra and on MATLAB; and finally stability, controller design,
+and classical control. The destinations named were PID control, state-feedback
+controllers, state observers, tracking controllers, and Bode and Nyquist plots.
+The Parts of these notes follow that plan.
+
+\begin{itemize}[leftmargin=1.2em,itemsep=1pt,topsep=3pt]
+  \item Part I --- Feedback and Modelling \hfill {\small\S\S1--2}
+  \item Part II --- State-Space Models and Linearization \hfill {\small\S\S3--4}
+  \item Part III --- Transfer Functions \hfill {\small\S5}
+  \item Part IV --- Frequency Response and Stability \hfill {\small\S\S6--7}
+  \item Part V --- Linear Algebra for State Space \hfill {\small\S\S8--11, in progress}
+  \item \emph{Stability, controller design, and classical control} --- state-feedback
+        controllers, state observers, tracking controllers, PID control
+        \hfill {\small planned}
+\end{itemize}
+
+The planned items are listed as the first lecture described them; how they divide
+into Parts will be settled as the lectures arrive. The goal of
+Question~\ref{q:goal} --- bringing the two carts to rest $1$\,m ahead after
+$5$\,s without knowing their parameters --- is a controller-design problem; the
+Parts so far build the models and the analysis that design will need.
+
+\section*{How these notes are organised}
+
+These notes are ordered by topic rather than by date. They are divided into Parts,
+each a stage of the course, and every new lecture is folded into the Part and
+section it belongs to, so nothing is said twice. Section numbers run on through
+the whole document; they do not restart with each Part. A hairline rule carrying a
+lecture number and date marks the point where each lecture's new material begins,
+and the table below lists the same points; where several lectures are written up
+together as one unit, a single rule carries the whole range. \textbf{Remarks} and worked
+\textbf{Examples} fill in derivations, examples and figures beyond what fitted on
+the board, and sit with the topic they belong to --- so a rule marks where a
+lecture began, not a claim that everything after it was said in that lecture.
+
+\smallskip
+\begin{center}\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+Lecture & Date & Begins at\\
+\midrule
+1 & Wed, 2 Sep 2026  & \S1\\
+2 & Mon, 7 Sep 2026  & \S2\\
+3 & Wed, 9 Sep 2026  & \S4\\
+4 & Mon, 14 Sep 2026 & \S5\\
+5 & Wed, 16 Sep 2026 & \S\ref{sec:polezero}\\
+6 & Mon, 21 Sep 2026 & \S\ref{sec:second}\\
+7--10 & Wed, 23 Sep -- Wed, 7 Oct 2026 & \S\ref{sec:vspace}\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+{\small\tableofcontents}
+
+%% ================================================================ Part I
+\partdivider{Part I --- Feedback and Modelling}
+
+\lecturebreak{Lecture 1}{2 September 2026}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{What Control Engineering Is About}
+
+\subsection{The question} Control engineering asks one question:
+\begin{center}
+\emph{how should the input be chosen so that the output does what we want?}
+\end{center}
+To answer it we must first know how the input and the output are related, and for
+a physical system that relation is almost always a \emph{differential equation}.
+So the course begins with differential equations, not with controllers.
+
+Two words will follow us all semester. The first is \textbf{uncertainty}: the
+differential equation we write down is never exactly the one the world obeys. The
+second is \textbf{feedback}: measuring the output and feeding it back into the
+input is what makes a design survive that uncertainty.
+
+A control system in practice is assembled from sensors, actuators, computers, the
+controller itself, and the communication between them. In these notes all of that
+is idealised away into a signal $u(t)$ going in and a signal $y(t)$ coming out.
+The \emph{output} $y$ need not be a continuously varying quantity to be tracked;
+it may equally well be ``get to that point and stay there''. Both are handled by
+the same machinery.
+
+\subsection{Dynamic versus static} A \emph{static} relation determines $y$ at time
+$t$ from $u$ at the same time $t$. A \emph{dynamic} relation has memory: the
+present output depends on the past input. The simplest example is a first-order
+linear differential equation,
+\begin{equation}\label{eq:rl}
+   L\dot y + Ry = u(t),
+\end{equation}
+which is, for instance, an $RL$ circuit driven by a voltage source $u$, with $y$
+the current. We write $y^{*}(t)$ for the \emph{desired} output --- the thing the
+controller is supposed to produce --- and $u(t)$ for the control input.
+
+\begin{note}
+The symbol $y$ is used for whatever the output happens to be: a current in
+\eqref{eq:rl}, a position in the next example. Keep track of which is which; the
+mathematics does not care, but the units do.
+\end{note}
+
+\subsection{A first example: holding a mass up against gravity}
+Consider a mass $m$ that can move vertically, with position $y(t)$ measured
+upwards, acted on by a control force $u(t)$ and by gravity
+(Figure~\ref{fig:mass}):
+\begin{equation}\label{eq:mass}
+   m\ddot y = u - mg .
+\end{equation}
+We want to hold it at height $h$: the desired output is the constant
+$y^{*}(t)=h$, and the mass starts there at rest,
+$y(0)=h$, $\dot y(0)=0$.
+
+\begin{figure}[htb]
+\centering
+\begin{tikzpicture}[>=Stealth,scale=1.0]
+  \draw[thick] (-0.15,0) -- (5.0,0);
+  \foreach \x in {0.05,0.35,...,4.95}{\draw[thin] (\x,0) -- ++(-0.22,-0.22);}
+  \draw[->,thick] (0.25,0) -- (0.25,3.55) node[left] {$y$};
+  \draw[dashed] (0.25,2.50) -- (4.95,2.50);
+  \node[right] at (4.95,2.50) {$y^{*}=h$};
+  \draw[thick,fill=black!5] (1.95,2.10) rectangle (3.15,2.90);
+  \node at (2.55,2.50) {$m$};
+  \draw[very thick,->] (2.20,1.15) -- (2.20,2.07);
+  \node[left,sig] at (2.10,1.58) {$u(t)$};
+  \draw[very thick,->] (2.90,2.07) -- (2.90,1.15);
+  \node[right,sig] at (2.92,1.58) {$mg$};
+  \draw[<->] (1.15,0) -- (1.15,2.50);
+  \node[left,sig] at (1.13,1.25) {$y(t)$};
+\end{tikzpicture}
+\caption{A mass held against gravity by a control force. The control problem is
+to choose $u(t)$ so that $y(t)$ stays at $h$.}
+\label{fig:mass}
+\end{figure}
+
+\smallskip
+\noindent\textbf{(a) Open loop.} Setting $\ddot y=0$ in \eqref{eq:mass} gives
+$u=mg$. With that constant input $\ddot y \equiv 0$, and with the initial
+conditions above $y(t)\equiv h$ for all time. On paper, the problem is solved
+without any feedback at all.
+
+\smallskip
+\noindent\textbf{(b) The trouble: uncertainty.} We do not know $m$. We know an
+estimate $\hat m$, and so we apply $u=\hat m g$. Now \eqref{eq:mass} reads
+$m\ddot y = \hat m g - mg = (\hat m - m)g$, a \emph{constant nonzero
+acceleration}. Integrating twice,
+\[
+   y(t) = h + \frac{(\hat m-m)g}{2m}\,t^{2}\;\longrightarrow\;\pm\infty .
+\]
+However small the modelling error $\hat m - m$, the mass eventually leaves. The
+open-loop design is not merely inaccurate; it fails qualitatively.
+
+\smallskip
+\noindent\textbf{(c) The cure: feedback.} Measure $y$ and $\dot y$ and use
+\begin{equation}\label{eq:pd}
+   u(t) = -c\,\dot y - k\,(y-h) + \hat m g ,
+\end{equation}
+where $c$ and $k$ are \emph{gains}: numbers we choose. They carry no uncertainty,
+because we are the ones who pick them. Substituting \eqref{eq:pd} into
+\eqref{eq:mass},
+\begin{equation}\label{eq:massfb}
+   m\ddot y + c\,\dot y + k\,(y-h) = (\hat m-m)g .
+\end{equation}
+For $c,k>0$ this is a damped second-order system driven by a constant, so $y$
+settles, and setting $\ddot y=\dot y=0$ gives the resting value
+\begin{equation}\label{eq:offset}
+   y(\infty) = h + \frac{(\hat m - m)g}{k}.
+\end{equation}
+The error is now \emph{bounded}, and it shrinks as $k$ grows. Feedback did not
+remove the uncertainty; it converted an unbounded error into a small one.
+
+\begin{question}
+Why does this work? What are good values of $c$ and $k$? How large may $k$ be
+before something else goes wrong? Answering these is what the rest of the course
+is for.
+\end{question}
+
+\subsection{Uncertainty, robustness, and learning}
+Designing a controller for the nominal model is only half the job; the other half
+is guaranteeing that it still behaves over the whole \emph{set} of plants that the
+real system might be. That is the subject of \emph{robust} control engineering.
+
+As an aside, the lecture contrasted this with reinforcement learning, where a
+policy is trained from a reward signal rather than from a model. Its
+characteristic difficulty is the \emph{sim-to-real gap}: a policy tuned in
+simulation need not work on hardware. The standard remedies --- domain
+randomisation and friends, i.e.\ training over a randomised family of simulators
+so that no single mismatch is fatal --- are robustness ideas in disguise. They are
+heuristic, but they are valuable exactly where a usable physical model is hard to
+come by. A model-based design, by contrast, is mathematical: one can in principle
+reason backwards from a specification to a controller. Even that is not easy, and
+much of this course is about learning how.
+
+%% ---------------------------------------------------------------- Lecture 2
+\lecturebreak{Lecture 2}{7 September 2026}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Modelling: the Two-Cart System}
+
+\subsection{The running example}
+The example that will accompany us through the course is the \emph{two-cart
+system} of Figure~\ref{fig:twocart}: a cart of mass $m_1$ at position $p_1(t)$,
+pushed by a force $u(t)$, coupled through a spring of stiffness $k$ and a damper
+$b$ to a second cart of mass $m_2$ at position $p_2(t)$. Both carts feel ground
+friction with coefficient $c$. The measured output is the position of the second
+cart, $y(t) = p_2(t)$. We take $p_1(0)=p_2(0)=0$: positions are measured from
+where the carts start.
+
+\begin{figure}[htb]
+\centering
+\begin{tikzpicture}[>=Stealth,scale=1.05]
+  \draw[thick] (-0.85,0) -- (7.75,0);
+  \foreach \x in {-0.6,-0.25,...,7.7}{\draw[thin] (\x,0) -- ++(-0.25,-0.25);}
+  \draw[thick,fill=black!5] (0.40,0.36) rectangle (2.00,1.60);
+  \node at (1.20,0.98) {$m_1$};
+  \draw[thick,fill=black!5] (5.00,0.36) rectangle (6.60,1.60);
+  \node at (5.80,0.98) {$m_2$};
+  \foreach \x in {0.80,1.60,5.40,6.20}{\draw[thick,fill=white] (\x,0.18) circle (0.18);}
+  \draw[thick] (2.00,1.28) -- (2.35,1.28);
+  \draw[thick,decorate,decoration={coil,aspect=0.62,segment length=3.8mm,amplitude=2.2mm}]
+       (2.35,1.28) -- (4.65,1.28);
+  \draw[thick] (4.65,1.28) -- (5.00,1.28);
+  \node[above] at (3.50,1.44) {$k$};
+  \draw[thick] (2.00,0.68) -- (3.20,0.68);
+  \draw[thick] (3.20,0.46) rectangle (3.78,0.90);
+  \draw[thick] (3.62,0.46) -- (3.62,0.90);
+  \draw[thick] (3.62,0.68) -- (5.00,0.68);
+  \node[below] at (2.58,0.63) {$b$};
+  \draw[very thick,->] (-0.80,0.98) -- (0.38,0.98);
+  \node[above] at (-0.22,1.02) {$u(t)$};
+  \draw[dashed,gray] (1.20,0) -- (1.20,-0.62);
+  \draw[->] (1.20,-0.62) -- (0.35,-0.62);
+  \node[right,lbl] at (1.26,-0.62) {$c\,\dot p_1$};
+  \draw[dashed,gray] (5.80,0) -- (5.80,-0.62);
+  \draw[->] (5.80,-0.62) -- (4.95,-0.62);
+  \node[right,lbl] at (5.86,-0.62) {$c\,\dot p_2$};
+  \draw[dashed] (1.20,1.60) -- (1.20,2.42);
+  \draw[dashed] (5.80,1.60) -- (5.80,2.42);
+  \draw[->] (1.20,2.22) -- ++(0.90,0); \node[above] at (1.65,2.22) {$p_1(t)$};
+  \draw[->] (5.80,2.22) -- ++(0.90,0); \node[above] at (6.25,2.22) {$p_2(t)=y(t)$};
+\end{tikzpicture}
+\caption{The two-cart system. The spring $k$ and the damper $b$ act between the
+carts; the ground friction $c$ acts on each cart separately and opposes its
+velocity.}
+\label{fig:twocart}
+\end{figure}
+
+\begin{question}[the goal for the semester]\label{q:goal}
+Make the system move forward and \emph{come to rest $1$\,m ahead after $5$
+seconds} --- and do it without knowing the values of $m_1$, $k$, $m_2$.
+\end{question}
+
+The second half of Question~\ref{q:goal} is the real content. Anyone can hit a
+target when the plant is known exactly; a controller that works without that
+knowledge is a control design.
+
+\subsection{Equations of motion}
+Newton's law for each cart. Cart~1 is pushed by $u$, pulled by the spring towards
+cart~2, damped by the relative motion of the two carts, and dragged by ground
+friction; cart~2 sees the same, minus the input:
+\begin{equation}\label{eq:eom}
+\left\{
+\begin{aligned}
+   m_1\ddot p_1 &= u(t) + k\,(p_2-p_1) + b\,(\dot p_2-\dot p_1) - c\,\dot p_1,\\
+   m_2\ddot p_2 &= \phantom{u(t)\;+{}} k\,(p_1-p_2) + b\,(\dot p_1-\dot p_2) - c\,\dot p_2,\\
+   y &= p_2 .
+\end{aligned}\right.
+\end{equation}
+
+\begin{remark}[the sign of the coupling terms]
+A damper mounted in parallel with the spring resists the \emph{relative} motion of
+its two ends, so its force on cart~1 has exactly the same sign pattern as the
+spring force: $+\,k(p_2-p_1)$ and $+\,b(\dot p_2-\dot p_1)$, and the mirror images
+on cart~2. A quick way to see that these signs are the physical ones is to look at
+the stretch of the spring, $q=p_1-p_2$. Subtracting the two equations (with $c=0$
+for simplicity),
+\[
+   \ddot q + b\Bigl(\tfrac1{m_1}+\tfrac1{m_2}\Bigr)\dot q
+           + k\Bigl(\tfrac1{m_1}+\tfrac1{m_2}\Bigr)q = \frac{u}{m_1},
+\]
+a damped oscillator: the internal mode, in which the carts swing against each
+other, loses energy through the damper, as it should. Flipping the sign of either
+coupling term would give that mode negative stiffness or negative damping.
+\end{remark}
+
+\begin{note}[symbols]
+Throughout, $c$ is the \emph{ground friction} coefficient and $b$ is the
+\emph{damper between the carts}.
+\end{note}
+
+\subsection{Three ways to describe the same system}
+\begin{figure}[htb]
+\centering
+\begin{tikzpicture}[>=Stealth]
+  \node (ph) [blk] {physical\\ system};
+  \node (de) [blk,right=17mm of ph] {differential\\ equation};
+  \node (tf) [blk,above right=6mm and 20mm of de] {transfer function\\ $P(s)=Y(s)/U(s)$};
+  \node (ss) [blk,below right=6mm and 20mm of de] {state space\\ $\dot x=Ax+Bu$};
+  \draw[->,thick] (ph) -- node[above,lbl] {modelling} (de);
+  \draw[->,thick] (de.east) -- node[above,sloped,lbl,pos=0.60] {Laplace} (tf.west);
+  \draw[->,thick] (de.east) -- node[below,sloped,lbl,pos=0.60] {state variables} (ss.west);
+  \draw[<->,thick] (tf) -- node[right,lbl,align=left]
+        {\S\ref{sec:ss2tf}\\ realization} (ss);
+  \draw[->,dashed] (ph.north) to[bend left=26]
+        node[above,lbl] {data-driven} (tf.north west);
+  \draw[->,dashed] (ph.south) to[bend right=26]
+        node[below,lbl] {data-driven} (ss.south west);
+\end{tikzpicture}
+\caption{Routes from a physical system to a mathematical model. The solid path is
+this course. The dashed ones are system identification / learning from data
+(neural networks and the like), which skip the differential equation altogether.}
+\label{fig:routes}
+\end{figure}
+
+The transfer function and the state-space form are two descriptions of the same
+differential equation, and (for linear systems) one can pass between them --- the
+double arrow in Figure~\ref{fig:routes}. Section~\ref{sec:ss2tf} does one of the
+two directions explicitly.
+
+%% =============================================================== Part II
+\partdivider{Part II --- State-Space Models and Linearization}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{The State-Space Representation}
+
+\subsection{State variables}
+The equations \eqref{eq:eom} are second order. Introduce one variable per
+independent piece of ``memory'' the system has --- here, a position and a velocity
+per cart:
+\[
+   x_1 = p_1,\qquad x_2=\dot p_1,\qquad x_3=p_2,\qquad x_4=\dot p_2 .
+\]
+Then \eqref{eq:eom} becomes four \emph{first-order} equations:
+\begin{equation}\label{eq:statelines}
+\left\{
+\begin{aligned}
+   \dot x_1 &= x_2, \\
+   \dot x_2 &= \frac{k}{m_1}(x_3-x_1) - \frac{c}{m_1}x_2 + \frac{b}{m_1}(x_4-x_2) + \frac{1}{m_1}u, \\
+   \dot x_3 &= x_4, \\
+   \dot x_4 &= \frac{k}{m_2}(x_1-x_3) - \frac{c}{m_2}x_4 + \frac{b}{m_2}(x_2-x_4), \\
+   y &= x_3 .
+\end{aligned}\right.
+\end{equation}
+The four equations are thoroughly tangled together, but every one of them is
+first order, and that is precisely what makes them easy to handle --- by a
+computer and by linear algebra alike.
+
+\subsection{The standard form}\label{sec:stdform}
+Collecting $x=(x_1,x_2,x_3,x_4)\tp$ we reach the \textbf{standard form of the
+state-space representation}:
+\begin{equation}\label{eq:std}
+   \boxed{\;\dot x(t) = A\,x(t) + B\,u(t),\qquad y(t) = C\,x(t) + D\,u(t).\;}
+\end{equation}
+Its dimensions are
+\begin{equation}\label{eq:dims}
+   x(t)\in\R^{n},\qquad u(t)\in\R^{m},\qquad y(t)\in\R^{p},
+\end{equation}
+so that $A\in\R^{n\times n}$, $B\in\R^{n\times m}$, $C\in\R^{p\times n}$,
+$D\in\R^{p\times m}$. The space $\R^{n}$ is called the \textbf{state space}, and
+$n$ --- the number of state variables --- is the \emph{order} of the system. A
+system with $m=p=1$ is called SISO (single input, single output); otherwise it
+is MIMO. Note that the three dimensions are independent: a plant may have many
+states and a single input, or several inputs and one output.
+
+For the two-cart system $n=4$, $m=p=1$. Taking $b=0$ to keep the entries short,
+\begin{equation}\label{eq:ABCD}
+ A=\begin{bmatrix}
+     0 & 1 & 0 & 0\\[2pt]
+     -\dfrac{k}{m_1} & -\dfrac{c}{m_1} & \dfrac{k}{m_1} & 0\\[6pt]
+     0 & 0 & 0 & 1\\[2pt]
+     \dfrac{k}{m_2} & 0 & -\dfrac{k}{m_2} & -\dfrac{c}{m_2}
+   \end{bmatrix},\quad
+ B=\begin{bmatrix}0\\[2pt] \dfrac{1}{m_1}\\[6pt] 0\\[2pt] 0\end{bmatrix},\quad
+ C=\begin{bmatrix}0&0&1&0\end{bmatrix},\quad D = 0 .
+\end{equation}
+
+\begin{remark}[where the uncertainty lives]
+Rows 1 and 3 of $A$ contain no parameters at all. They are not physics; they are
+the definitions $\dot x_1=x_2$ and $\dot x_3=x_4$, and they are exactly right
+whatever the carts weigh. All the uncertainty of the model is confined to rows 2
+and 4. It is a general and useful feature of mechanical state-space models: the
+kinematic rows are exact, and only the rows that encode Newton's law carry the
+parameters one might not know.
+\end{remark}
+
+\begin{remark}[keeping the damper]
+If $b$ is not dropped, only rows 2 and 4 change:
+\[
+   A_{2\bullet}=\Bigl[-\tfrac{k}{m_1},\;-\tfrac{c+b}{m_1},\;\tfrac{k}{m_1},\;\tfrac{b}{m_1}\Bigr],
+   \qquad
+   A_{4\bullet}=\Bigl[\tfrac{k}{m_2},\;\tfrac{b}{m_2},\;-\tfrac{k}{m_2},\;-\tfrac{c+b}{m_2}\Bigr].
+\]
+The damper adds to the diagonal velocity terms and couples the two velocities,
+exactly as the spring couples the two positions.
+\end{remark}
+
+In MATLAB the quadruple is packaged as \verb|sys = ss(A,B,C,D)|.
+
+\subsection{What ``state'' means}
+\begin{definition}[state]\label{def:state}
+The \emph{state} $x(t)$ is the minimum amount of information about the system at
+time $t$ which, together with the input $u(\tau)$ for $\tau\ge t$, determines the
+output $y(\tau)$ for all $\tau\ge t$.
+\end{definition}
+Everything that happened before time $t$ matters only through $x(t)$. For the two
+carts, knowing where both carts are and how fast they are going is enough; their
+history is irrelevant. The word \emph{minimum} is what makes the definition
+useful: it is why the state is four-dimensional here and not five.
+
+\begin{remark}\label{rem:nonlinear}
+Definition~\ref{def:state} says nothing about linearity, and indeed the
+state-space description works for nonlinear systems just as well
+(Section~\ref{sec:nonlinear}). The transfer function does not: it exists only for
+linear systems.
+\end{remark}
+
+\subsection{Simulating the standard form}
+Because \eqref{eq:std} is a system of first-order equations, a computer can march
+it forward directly. The crudest such scheme, and the one this course starts
+with, is the \emph{forward Euler method}: for a small step $h>0$,
+\begin{equation}\label{eq:euler}
+   x(t+h) \;\approx\; x(t) + h\,\bigl(Ax(t)+Bu(t)\bigr),
+\end{equation}
+or, for a general nonlinear right-hand side, $x(t+h)\approx x(t)+h\,f(x(t),u(t))$.
+It is nothing more than the first two terms of the Taylor series of $x$ about $t$,
+so the error made in one step is of order $h^{2}$. Choosing $h$ is not free,
+however: too large a step and the simulation diverges even though the system does
+not.
+
+\begin{remark}[how large a step]\label{rem:eulerstab}
+The limit on $h$ can be computed exactly on the scalar test equation
+$\dot x=\lambda x$, whose true solution decays whenever $\operatorname{Re}\lambda<0$.
+One Euler step multiplies $x$ by a fixed factor,
+\[
+   x_{k+1} = (1+h\lambda)\,x_k ,\qquad x_k = (1+h\lambda)^{k}x_0 ,
+\]
+so the simulation decays only if $|1+h\lambda|<1$ --- that is, only if $h\lambda$
+lies inside the unit disc centred at $-1$. For a real $\lambda<0$ this means
+\[
+   h < \frac{2}{|\lambda|} .
+\]
+For the linear system $\dot x=Ax$ the same condition must hold for every
+eigenvalue of $A$ at once, so the fastest mode sets the step. An eigenvalue on or
+near the imaginary axis --- a lightly damped oscillation --- is the worst case: for
+$\lambda=-\sigma\pm j\omega$ with small $\sigma$ the condition $|1+h\lambda|<1$
+reads $h<2\sigma/(\sigma^{2}+\omega^{2})$, which is tiny when $\sigma\ll\omega$. A
+purely imaginary $\lambda$ can never satisfy it: forward Euler turns every
+undamped oscillation into a growing one.
+\end{remark}
+
+%% ---------------------------------------------------------------- Lecture 3
+\lecturebreak{Lecture 3}{9 September 2026}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Nonlinear Systems, Equilibria, and Linearization}\label{sec:nonlinear}
+
+\subsection{The nonlinear standard form}
+Most real systems are not linear. The general form we will use is
+\begin{equation}\label{eq:nl}
+   \dot z = f(z,u),\qquad w = h(z,u),
+\end{equation}
+with $z(t)\in\R^{n}$, $u(t)\in\R^{m}$, $w(t)\in\R^{p}$ and
+\[
+   f:\R^{n}\times\R^{m}\to\R^{n},\qquad h:\R^{n}\times\R^{m}\to\R^{p}
+\]
+assumed \emph{regular} --- smooth enough that the derivatives below exist. Written
+out, \eqref{eq:nl} is
+\[
+   \dot z=\begin{pmatrix}\dot z_1\\ \vdots\\ \dot z_n\end{pmatrix}
+        =\begin{pmatrix}f_1(z(t),u(t))\\ \vdots\\ f_n(z(t),u(t))\end{pmatrix}.
+\]
+
+\begin{note}[notation for this section]
+We reserve $(z,u,w)$ for the nonlinear system and $(x,u,y)$ for the linear one,
+because the variables of the linearized model will turn out to be
+\emph{deviations} from an operating point, not the physical quantities themselves.
+Mixing the two up is the single most common error in this material.
+\end{note}
+
+\begin{example}[pendulum]\label{ex:pend}
+A pendulum of mass $m$ on a massless rod of length $\ell$, with viscous friction
+$b$ at the pivot and a torque $u(t)$ applied there (Figure~\ref{fig:pend}), obeys
+\[
+   m\ell^{2}\ddot\theta = u(t) - mg\ell\sin\theta - b\,\dot\theta,
+   \qquad\text{i.e.}\qquad
+   m\ell^{2}\ddot\theta + b\,\dot\theta + mg\ell\sin\theta = u(t),
+\]
+where $\theta$ is measured from the downward vertical. With $z_1=\theta$,
+$z_2=\dot\theta$ this is exactly of the form \eqref{eq:nl}:
+\begin{equation}\label{eq:pendstate}
+\left\{
+\begin{aligned}
+   \dot z_1 &= z_2,\\
+   \dot z_2 &= -\frac{b}{m\ell^{2}}\,z_2 - \frac{g}{\ell}\sin z_1
+               + \frac{1}{m\ell^{2}}\,u,\\
+   w &= z_1 .
+\end{aligned}\right.
+\end{equation}
+The $\sin z_1$ is the whole difficulty: everything else is linear.
+\end{example}
+
+\begin{figure}[htb]
+\centering
+\begin{tikzpicture}[>=Stealth,scale=1.25]
+  \draw[thick] (-1.45,0) -- (1.45,0);
+  \foreach \x in {-1.35,-1.05,...,1.42}{\draw[thin] (\x,0) -- ++(-0.22,0.22);}
+  \draw[dashed] (0,0) -- (0,-2.95);
+  \draw[thick] (0,0) -- (1.30,-2.25);
+  \draw[thick,fill=black!10] (1.30,-2.25) circle (0.28);
+  \node[sig] at (1.30,-2.25) {$m$};
+  \fill (0,0) circle (2.4pt);
+  \draw[->] (0,-1.25) arc (-90:-60:1.25);
+  \node at (0.38,-1.46) {$\theta$};
+  \node[right,sig] at (1.00,-1.66) {$\ell$};
+  \draw[very thick,->] (1.30,-2.62) -- (1.30,-3.38);
+  \node[right,sig] at (1.34,-3.02) {$mg$};
+  \draw[->,thick] (190:0.88) arc (190:256:0.88);
+  \node[left,sig] at (-0.94,-0.52) {$u(t)$};
+  \node[left,sig] at (-0.06,-0.24) {$b$};
+\end{tikzpicture}
+\caption{The pendulum of Example~\ref{ex:pend}: $\theta$ is measured from the
+downward vertical, $b$ is viscous friction at the pivot, and $u(t)$ is an applied
+torque.}
+\label{fig:pend}
+\end{figure}
+
+\subsection{Equilibria} The trick for dealing with \eqref{eq:nl} is to work near a
+point where nothing is happening.
+
+\begin{definition}[equilibrium]\label{def:eq}
+A pair $(z^{*},u^{*})$ with $f(z^{*},u^{*}) = 0$ is an \emph{equilibrium}. If the
+input is held at the constant value $u^{*}$ and the system starts at
+$z(0)=z^{*}$, then $\dot z=0$ and $z(t)\equiv z^{*}$ forever.
+\end{definition}
+Note that the input must be a \emph{constant} for this to make sense; ``an
+equilibrium'' is always an equilibrium \emph{of a particular constant input}.
+
+For the pendulum with $u^{*}=0$: $f=0$ forces $z_2^{*}=0$ and $\sin z_1^{*}=0$,
+so $z_1^{*}=0$ (hanging down) or $z_1^{*}=\pi$ (balanced upright). Both are
+equilibria; only one of them is one you can leave unattended.
+
+\subsection{The Jacobian}
+For $f:\R^{n}\to\R^{n}$ (suppressing $u$ for a moment), the \emph{Jacobian} is the
+matrix of all first partial derivatives,
+\[
+   \Dop f \;=\;
+   \begin{pmatrix}
+     \dfrac{\partial f_1}{\partial x_1} & \dfrac{\partial f_1}{\partial x_2} & \cdots & \dfrac{\partial f_1}{\partial x_n}\\[10pt]
+     \vdots & \vdots & \ddots & \vdots\\[6pt]
+     \dfrac{\partial f_n}{\partial x_1} & \dfrac{\partial f_n}{\partial x_2} & \cdots & \dfrac{\partial f_n}{\partial x_n}
+   \end{pmatrix}
+   \;\in\;\R^{n\times n}.
+\]
+It is the best linear approximation of $f$ near a point --- the multivariable
+analogue of the derivative.
+
+\subsection{Linearization}\label{sec:lin}
+Expand $f$ in a Taylor series about the equilibrium $(z^{*},u^{*})$:
+\[
+   \dot z = f(z,u)
+   = \underbrace{f(z^{*},u^{*})}_{=\,0}
+   + \underbrace{\left.\frac{\partial f}{\partial z}\right|_{z^{*},u^{*}}}_{=:\,A}
+     \underbrace{(z-z^{*})}_{=:\,x}
+   + \underbrace{\left.\frac{\partial f}{\partial u}\right|_{z^{*},u^{*}}}_{=:\,B}
+     \underbrace{(u-u^{*})}_{=:\,\tilde u}
+   + \cdots
+\]
+The constant term vanishes precisely because we expanded about an equilibrium ---
+that is what equilibria are for. Since $z^{*}$ is constant, $\dot x=\dot z$, and
+dropping the higher-order terms leaves
+\begin{equation}\label{eq:linAB}
+   \dot x = A\,x + B\,\tilde u,\qquad
+   A = \Dop_{z}f\bigl|_{z^{*},u^{*}},\qquad
+   B = \Dop_{u}f\bigl|_{z^{*},u^{*}} .
+\end{equation}
+The output is treated the same way. From
+$w = h(z,u) = h(z^{*},u^{*}) + \Dop_{z}h|_{*}\,x + \Dop_{u}h|_{*}\,\tilde u + \cdots$,
+define the output deviation $y := w - h(z^{*},u^{*})$, and then
+\begin{equation}\label{eq:linCD}
+   y = C\,x + D\,\tilde u,\qquad
+   C = \Dop_{z}h\bigl|_{z^{*},u^{*}},\qquad
+   D = \Dop_{u}h\bigl|_{z^{*},u^{*}} .
+\end{equation}
+The result is exactly the standard form \eqref{eq:std}, which is why everything
+built for linear systems can be pointed at a nonlinear one --- locally.
+
+\begin{caution}[what the variables mean]
+$A,B,C,D$ are \emph{constant} matrices: the Jacobians evaluated at the
+equilibrium, not functions of $z$. And $x$, $\tilde u$, $y$ are all
+\emph{deviations} --- $x=z-z^{*}$, $\tilde u=u-u^{*}$, $y=w-h(z^{*},u^{*})$.
+(It is common to drop the tilde and write $u$ for the input deviation as well.)
+If you feed a linearized model the absolute input instead of the deviation,
+everything downstream is wrong by a constant.
+\end{caution}
+
+\begin{example}[pendulum, continued]
+For Example~\ref{ex:pend},
+\[
+   \Dop_{z}f = \begin{bmatrix} 0 & 1\\[4pt]
+     -\dfrac{g}{\ell}\cos z_1 & -\dfrac{b}{m\ell^{2}}\end{bmatrix},
+   \qquad
+   \Dop_{u}f = \begin{bmatrix}0\\[4pt] \dfrac{1}{m\ell^{2}}\end{bmatrix},
+   \qquad
+   x = \begin{bmatrix}z_1\\ z_2\end{bmatrix} - z^{*} .
+\]
+At the downward equilibrium $z^{*}=(0,0)$, $u^{*}=0$, we get $\cos z_1^{*}=1$ and
+\[
+   A = \begin{bmatrix}0&1\\[3pt] -\dfrac{g}{\ell} & -\dfrac{b}{m\ell^{2}}\end{bmatrix},
+   \qquad
+   B = \begin{bmatrix}0\\[3pt] \dfrac{1}{m\ell^{2}}\end{bmatrix},
+   \qquad C=\begin{bmatrix}1&0\end{bmatrix},\qquad D=0 .
+\]
+\end{example}
+
+\begin{example}[pendulum, the upright equilibrium]\label{ex:pendup}
+The $(2,1)$ entry of $\Dop_z f$ is $-\frac{g}{\ell}\cos z_1^{*}$, so it depends
+on where we linearize. At the upright equilibrium $z^{*}=(\pi,0)$, $u^{*}=0$ it
+becomes $+g/\ell$:
+\[
+   A_{\text{up}} = \begin{bmatrix}0&1\\[3pt] \dfrac{g}{\ell} & -\dfrac{b}{m\ell^{2}}\end{bmatrix},
+   \qquad
+   \det(\lambda I-A_{\text{up}}) = \lambda^{2}+\frac{b}{m\ell^{2}}\lambda-\frac{g}{\ell}.
+\]
+The constant term of the characteristic polynomial is now negative, so one root is
+positive whatever $b$ is --- for $b=0$ the eigenvalues are $\pm\sqrt{g/\ell}$.
+The linearization is unstable, as it must be: a pendulum balanced on its end falls
+over. At the hanging equilibrium the same polynomial reads
+$\lambda^{2}+\frac{b}{m\ell^{2}}\lambda+\frac{g}{\ell}$, whose roots have negative
+real part for every $b>0$. One nonlinear model, two equilibria, two qualitatively
+different linear models --- which is exactly why an equilibrium must always be
+named when a linearization is written down.
+\end{example}
+
+\subsection{Where the linear model sits}
+The linearized system is not a separate object; it is a window onto the real one.
+Figure~\ref{fig:lin} shows the bookkeeping: shift the input by $u^{*}$ on the way
+in, and subtract the equilibrium output $h(z^{*},u^{*})$ on the way out.
+
+\begin{figure}[htb]
+\centering
+\begin{tikzpicture}[>=Stealth]
+  \node (sum1) [sumc] {};
+  \node (plant) [draw,align=center,inner sep=6pt,minimum height=13mm,
+                 right=19mm of sum1] {$\dot z = f(z,u)$\\[2pt] $w = h(z,u)$};
+  \node (sum2) [sumc,right=19mm of plant] {};
+  \node (in)  [left=14mm of sum1] {$\tilde u$};
+  \node (out) [right=14mm of sum2] {$y$};
+  \draw[->] (in) -- node[pos=0.62,above,lbl] {$+$} (sum1);
+  \draw[->] (sum1) -- node[above,sig] {$u$} (plant);
+  \draw[->] (plant) -- node[above,sig] {$w$} (sum2);
+  \draw[->] (sum2) -- (out);
+  \draw[->] ($(sum1)+(0,13mm)$) node[above,sig] {$u^{*}$}
+        -- node[pos=0.72,right,lbl] {$+$} (sum1);
+  \draw[->] ($(sum2)+(0,13mm)$) node[above,sig] {$h(z^{*},u^{*})$}
+        -- node[pos=0.72,right,lbl] {$-$} (sum2);
+  \node[below=2.5mm of plant,lbl] {true nonlinear system};
+\end{tikzpicture}
+\caption{The linearized model $\dot x=Ax+B\tilde u$, $y=Cx+D\tilde u$
+approximates the map $\tilde u\mapsto y$ drawn here, for $\tilde u$ small.}
+\label{fig:lin}
+\end{figure}
+
+\subsection{Phase portraits}
+For a second-order autonomous system
+$\dot x_1 = f_1(x_1,x_2)$, $\dot x_2 = f_2(x_1,x_2)$,
+one can draw the whole solution family at once: plot the trajectories in the
+$(x_1,x_2)$ plane. The picture is called a \emph{phase portrait}. Time itself does
+not appear on it, but everything else does --- equilibria are the points where the
+vector field vanishes, and by uniqueness of solutions two trajectories never
+cross. Figure~\ref{fig:phase} shows a stable spiral.
+
+\begin{figure}[htb]
+\centering
+\begin{tikzpicture}[>=Stealth,scale=1.2]
+  \foreach \a in {-2.4,-1.6,...,2.5}{
+    \foreach \bb in {-2.4,-1.6,...,2.5}{
+      \pgfmathsetmacro{\dx}{\bb}
+      \pgfmathsetmacro{\dy}{-\a-0.7*\bb}
+      \pgfmathsetmacro{\nn}{sqrt(\dx*\dx+\dy*\dy)+0.001}
+      \draw[->,gray!50,thin] (\a,\bb) -- ++({0.44*\dx/\nn},{0.44*\dy/\nn});
+    }}
+  \draw[->] (-3.0,0) -- (3.0,0) node[right] {$x_1$};
+  \draw[->] (0,-2.95) -- (0,2.95) node[above] {$x_2$};
+  \foreach \A in {2.4,1.3}{
+    \draw[thick] plot[domain=0:720,samples=100,variable=\t,smooth]
+      ({\A*exp(-0.0065216*\t)*(cos(\t)+0.37364*sin(\t))},
+       {-1.0676*\A*exp(-0.0065216*\t)*sin(\t)});}
+  \foreach \A/\T in {2.4/40, 2.4/180, 1.3/110}{
+    \pgfmathsetmacro{\xa}{\A*exp(-0.0065216*\T)*(cos(\T)+0.37364*sin(\T))}
+    \pgfmathsetmacro{\ya}{-1.0676*\A*exp(-0.0065216*\T)*sin(\T)}
+    \pgfmathsetmacro{\xb}{\A*exp(-0.0065216*(\T+16))*(cos(\T+16)+0.37364*sin(\T+16))}
+    \pgfmathsetmacro{\yb}{-1.0676*\A*exp(-0.0065216*(\T+16))*sin(\T+16)}
+    \draw[->,thick] (\xa,\ya) -- (\xb,\yb);}
+  \foreach \A in {2.4,1.3}{\fill (\A,0) circle (1.7pt);}
+  \node[above right,lbl] at (2.42,0.04) {$x(0)$};
+  \fill (0,0) circle (2.4pt);
+\end{tikzpicture}
+\caption{Phase portrait of $\dot x_1=x_2$, $\dot x_2=-x_1-0.7x_2$. Grey arrows are
+the vector field; the two heavy curves are trajectories. The black dot at the
+origin is the equilibrium, and both trajectories spiral into it.}
+\label{fig:phase}
+\end{figure}
+
+For a \emph{linear} second-order system $\dot x = Ax$ the whole portrait is fixed
+by the two eigenvalues $\lambda_{1,2}$ of $A$, and there are only a handful of
+possible pictures:
+
+\begin{center}\small
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{}lll@{}}
+\toprule
+eigenvalues & portrait & behaviour near the equilibrium\\
+\midrule
+real, both negative          & stable node     & every trajectory enters, without circling\\
+real, both positive          & unstable node   & every trajectory leaves\\
+real, opposite signs         & saddle          & in along one direction, out along the other\\
+complex, $\operatorname{Re}\lambda<0$ & stable focus (spiral) & trajectories spiral in\\
+complex, $\operatorname{Re}\lambda>0$ & unstable focus & trajectories spiral out\\
+purely imaginary             & centre          & closed orbits, neither in nor out\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent For real eigenvalues the straight-line trajectories along the
+eigenvectors are the skeleton of the picture: the solution is
+$x(t)=c_1e^{\lambda_1t}v_1+c_2e^{\lambda_2t}v_2$, and each component grows or
+decays along its own eigenvector (Figure~\ref{fig:portraits}). For a complex pair
+$\sigma\pm j\omega$ the solution is an $e^{\sigma t}$ envelope around a rotation at
+frequency $\omega$ --- exactly the partial-fraction terms of \S\ref{sec:pfe}.
+
+\begin{figure}[htb]
+\centering
+\begin{tikzpicture}[>=Stealth]
+  \foreach \px/\ma/\mb/\mc/\md/\name in {0/-1/0/0/-2.5/stable node,
+                                     3.35/1/0/0/-1.5/saddle,
+                                     6.7/-0.35/1/-1/-0.35/stable focus,
+                                     10.05/0/1/-1/0/centre}{
+    \begin{scope}[xshift=\px cm,scale=0.62]
+      \draw[gray!60] (-2,0) -- (2,0); \draw[gray!60] (0,-2) -- (0,2);
+      \foreach \u in {-1.6,-0.8,...,1.7}{
+        \foreach \w in {-1.6,-0.8,...,1.7}{
+          \pgfmathsetmacro{\dx}{\ma*\u+\mb*\w}
+          \pgfmathsetmacro{\dy}{\mc*\u+\md*\w}
+          \pgfmathsetmacro{\nn}{sqrt(\dx*\dx+\dy*\dy)+0.001}
+          \draw[->,thin] (\u,\w) -- ++({0.34*\dx/\nn},{0.34*\dy/\nn});
+        }}
+      \fill (0,0) circle (2.2pt);
+      \node[lbl] at (0,-2.45) {\name};
+    \end{scope}}
+\end{tikzpicture}
+\caption{Four of the linear portraits of the table, drawn as vector fields of
+$\dot x=Ax$: a stable node ($A=\operatorname{diag}(-1,-2.5)$), a saddle
+($\operatorname{diag}(1,-1.5)$), a stable focus (eigenvalues $-0.35\pm j$), and a
+centre (eigenvalues $\pm j$).}
+\label{fig:portraits}
+\end{figure}
+
+\begin{remark}[back to the pendulum]
+Linearization tells us which picture a nonlinear system shows \emph{near} each
+equilibrium. For the pendulum of Example~\ref{ex:pend}, the hanging equilibrium
+has characteristic polynomial $\lambda^{2}+\frac{b}{m\ell^{2}}\lambda+\frac g\ell$:
+a stable focus for light friction and a stable node for heavy friction. The upright
+equilibrium has $\lambda^{2}+\frac{b}{m\ell^{2}}\lambda-\frac g\ell$, whose roots
+are real and of opposite sign: a saddle. One nonlinear portrait contains both
+pictures, a spiral sink at $\theta=0$ and a saddle at $\theta=\pi$, stitched
+together far from either.
+\end{remark}
+
+%% ============================================================== Part III
+\partdivider{Part III --- Transfer Functions}
+
+\lecturebreak{Lecture 4}{14 September 2026}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{The Laplace Transform and Transfer Functions}
+
+\subsection{Laplace transform: the part we need}
+The (one-sided) Laplace transform of a signal $f(t)$ is
+\begin{equation}\label{eq:laplace}
+   F(s) = \Lap\{f\}(s) = \int_{0^{-}}^{\infty} f(t)\,e^{-st}\,\d t ,
+   \qquad s\in\mathbb{C}.
+\end{equation}
+The lower limit is written $0^{-}$: the integral starts \emph{before} $t=0$, so
+that an impulse sitting at the origin, and the initial state, are counted.
+
+\smallskip
+\begin{center}
+\renewcommand{\arraystretch}{2.0}
+\begin{tabular}{@{}l@{\qquad\qquad}l@{\qquad\qquad}l@{}}
+\toprule
+$\delta(t) \;\mapsto\; 1$
+  & $u_{s}(t) \;\mapsto\; \dfrac{1}{s}$
+  & $t\,u_{s}(t) \;\mapsto\; \dfrac{1}{s^{2}}$\\[6pt]
+$t^{n}u_{s}(t) \;\mapsto\; \dfrac{n!}{s^{\,n+1}}$
+  & $e^{-\alpha t} \;\mapsto\; \dfrac{1}{s+\alpha}$
+  & $f(t-a)\,u_{s}(t-a) \;\mapsto\; e^{-as}F(s)$\\[6pt]
+$\sin\omega t \;\mapsto\; \dfrac{\omega}{s^{2}+\omega^{2}}$
+  & $\cos\omega t \;\mapsto\; \dfrac{s}{s^{2}+\omega^{2}}$
+  & $f*g \;\mapsto\; F(s)\,G(s)$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\smallskip\noindent
+Here $u_{s}$ is the unit step. The pairs are only half of the toolkit; the other
+half is the list of \emph{operations} the transform turns into algebra.
+
+\begin{center}\small
+\renewcommand{\arraystretch}{1.55}
+\begin{tabular}{@{}lll@{}}
+\toprule
+& time domain & $s$-domain\\
+\midrule
+linearity        & $a f(t)+b g(t)$            & $aF(s)+bG(s)$\\
+differentiation  & $\dot f(t)$                & $sF(s)-f(0^{-})$\\
+integration      & $\int_{0}^{t} f(\tau)\,\d\tau$ & $F(s)/s$\\
+time shift       & $f(t-a)\,u_s(t-a)$, $a>0$  & $e^{-as}F(s)$\\
+frequency shift  & $e^{-\alpha t}f(t)$        & $F(s+\alpha)$\\
+multiplication by $t$ & $t\,f(t)$             & $-F'(s)$\\
+convolution      & $(f*g)(t)=\int_0^t f(\tau)g(t-\tau)\,\d\tau$ & $F(s)\,G(s)$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Of these, the one that does the real work is differentiation:
+\begin{equation}\label{eq:diffrule}
+   \Lap\{\dot f\} = sF(s) - f(0),
+   \qquad
+   \Lap\{\ddot f\} = s^{2}F(s) - s f(0) - \dot f(0).
+\end{equation}
+The one line to remember is its consequence: \emph{if all initial conditions
+vanish, differentiation becomes multiplication by $s$} --- and, by the
+integration rule, integration becomes division by $s$. That single fact turns a
+linear differential equation into an algebraic one, and it is the entire reason
+the transfer function exists.
+
+\begin{remark}[reading the table]
+Two of the rows are worth seeing as pictures. The frequency shift says that
+damping a signal by $e^{-\alpha t}$ slides its transform to the left by $\alpha$
+in the $s$-plane: $\sin\omega t$ has poles at $\pm j\omega$, and
+$e^{-\alpha t}\sin\omega t$ has poles at $-\alpha\pm j\omega$. The time shift
+says that a pure delay of $a$ seconds multiplies by $e^{-as}$ --- a factor that is
+not a ratio of polynomials, which is why delays sit awkwardly with everything
+built on rational transfer functions.
+\end{remark}
+
+\subsection{Initial and final values}\label{sec:fvt}
+Two limits let one read the beginning and the end of a signal straight off its
+transform, without inverting it.
+
+\begin{proposition}[initial- and final-value theorems]\label{prop:fvt}
+Let $f$ have Laplace transform $F$.
+\begin{enumerate}[label=(\roman*),itemsep=2pt]
+\item If $F$ is strictly proper, then $f(0^{+}) = \lim_{s\to\infty} sF(s)$.
+\item If every pole of $sF(s)$ has strictly negative real part, then
+$f(t)$ has a limit as $t\to\infty$, and
+\[
+   \lim_{t\to\infty} f(t) = \lim_{s\to 0} sF(s).
+\]
+\end{enumerate}
+\end{proposition}
+
+Both follow from the differentiation rule: $\int_{0}^{\infty}\dot f(t)e^{-st}\,\d t
+= sF(s)-f(0)$, and letting $s\to0$ (the integral becomes $f(\infty)-f(0)$) or
+$s\to\infty$ (the integral vanishes) gives the two statements.
+
+\begin{caution}[the hypothesis of the final-value theorem]
+The condition on the poles is not decoration. For $F(s)=1/(s-1)$ the formula
+gives $\lim_{s\to0}sF(s)=0$, yet $f(t)=e^{t}$ grows without bound. Likewise
+$F(s)=\omega/(s^{2}+\omega^{2})$ gives $0$, but $\sin\omega t$ has no limit at
+all. The theorem only reports a final value that exists; it cannot decide
+whether one does. That question is answered by the poles, and it is the
+subject of stability.
+\end{caution}
+
+\begin{example}[the steady offset of the held mass]
+The feedback law of \S1.3 produced \eqref{eq:massfb},
+$m\ddot y+c\dot y+k(y-h)=(\hat m-m)g$. Put $e=y-h$; with $e(0)=\dot e(0)=0$ and a
+constant right-hand side $d=(\hat m-m)g$,
+\[
+   E(s) = \frac{d}{s\,(ms^{2}+cs+k)} ,
+   \qquad
+   \lim_{t\to\infty} e(t) = \lim_{s\to0} sE(s) = \frac{d}{k} .
+\]
+The poles of $sE(s)$ are the roots of $ms^{2}+cs+k$, which lie in the left
+half-plane for $c,k>0$, so the theorem applies, and it reproduces
+\eqref{eq:offset} without solving the differential equation.
+\end{example}
+
+\subsection{The transfer function}
+\begin{definition}[transfer function]\label{def:tf}
+For a linear time-invariant system with input $u(t)$ and output $y(t)$ that is
+\emph{initially at rest} (all initial conditions zero), the \emph{transfer
+function} is
+\[
+   P(s) \;=\; \frac{\Lap\{y(t)\}}{\Lap\{u(t)\}} \;=\; \frac{Y(s)}{U(s)} .
+\]
+\end{definition}
+
+\begin{figure}[htb]
+\centering
+\begin{tikzpicture}[>=Stealth]
+  \node (b) [draw,minimum width=24mm,minimum height=12mm] {$P(s)$};
+  \draw[->,thick] ($(b.west)+(-24mm,0)$) node[left] {$u(t)$}
+        -- node[above,sig] {$U(s)$} (b.west);
+  \draw[->,thick] (b.east)
+        -- node[above,sig] {$Y(s)$} ($(b.east)+(24mm,0)$) node[right] {$y(t)$};
+\end{tikzpicture}
+\caption{The transfer function as a block: $Y(s)=P(s)U(s)$, valid when the system
+starts at rest.}
+\label{fig:tfblock}
+\end{figure}
+
+Equivalently, $P(s)$ is the Laplace transform of the impulse response: putting
+$u=\delta$ gives $U\equiv1$ and hence $Y=P$. When several signals are around it
+is also written $T_{uy}(s)$, marking which signal is the input and which the
+output; for a single-input single-output system the plain $P(s)$ is unambiguous.
+
+\begin{remark}[why ``initially at rest'' is not a detail]
+Without that hypothesis the transformed equation carries extra terms
+$-sy(0)-\dot y(0)-\cdots$ coming from the initial conditions, and the ratio
+$Y(s)/U(s)$ then depends on how the system happened to start, not only on the
+system. It would not be a property of the plant, and calling it a transfer
+\emph{function of the system} would be meaningless.
+\end{remark}
+
+\begin{example}\label{ex:tf}
+Take $\ddot y + 3\dot y + y = 2\dot u + u$. Transforming with zero initial
+conditions, $s^{2}Y+3sY+Y = 2sU+U$, so
+$P(s) = (2s+1)/(s^{2}+3s+1)$.
+\end{example}
+The recipe is visible in the example: in
+$a_n y^{(n)}+\cdots+a_1\dot y+a_0y = b_m u^{(m)}+\cdots+b_1\dot u+b_0u$,
+replace every $\d/\d t$ by $s$ and solve for $Y/U$:
+\[
+   P(s) = \frac{b_ms^{m}+\cdots+b_1s+b_0}{a_ns^{n}+\cdots+a_1s+a_0} .
+\]
+The degree of the denominator is the order of the system.
+
+\subsection{Example: the two-cart system, idealized}\label{sec:twocarttf}
+Strip the two-cart system of friction and of the coupling damper ($c=b=0$):
+\begin{equation}\label{eq:twocartideal}
+   m_1\ddot p_1 = k\,(p_2-p_1) + u,\qquad
+   m_2\ddot p_2 = k\,(p_1-p_2),\qquad y=p_2 .
+\end{equation}
+Transforming with zero initial conditions, and writing $Y=P_2$,
+\[
+   m_1 s^{2}P_1 = kY - kP_1 + U,\qquad
+   m_2 s^{2}Y = kP_1 - kY .
+\]
+The second equation gives $P_1 = \dfrac{m_2s^{2}+k}{k}\,Y$. Substituting it into
+the first, $\;(m_1s^{2}+k)P_1 = kY+U$, yields
+\[
+   \frac{(m_1s^{2}+k)(m_2s^{2}+k)}{k}\,Y = kY + U
+   \quad\Longrightarrow\quad
+   \Bigl[(m_1s^{2}+k)(m_2s^{2}+k) - k^{2}\Bigr]Y = k\,U .
+\]
+Since $(m_1s^{2}+k)(m_2s^{2}+k)-k^{2} = s^{2}\bigl(m_1m_2s^{2}+k(m_1+m_2)\bigr)$,
+\begin{equation}\label{eq:twocartP}
+   \boxed{\;
+   \frac{Y(s)}{U(s)} \;=\; \frac{k}{\,s^{2}\bigl(m_1m_2\,s^{2}+k(m_1+m_2)\bigr)\,}\;}
+\end{equation}
+
+\begin{remark}[reading \eqref{eq:twocartP}]
+The factor $s^{2}$ in the denominator is the free rigid-body mode: with no
+friction, nothing ties the pair of carts to the ground, so a net impulse leaves
+them drifting forever. The remaining factor vanishes at
+$s = \pm j\sqrt{k(m_1+m_2)/(m_1m_2)}$, the frequency at which the two carts
+oscillate against each other. Both are on the imaginary axis --- with $c=b=0$
+nothing damps, which is exactly why the model of Section~2 kept $c$ and $b$.
+\end{remark}
+
+\begin{caution}[two different two-cart models]
+Equation~\eqref{eq:twocartideal} is \emph{not} the model \eqref{eq:eom}: the
+friction $c$ and the damper $b$ have been dropped to keep the algebra readable.
+Do not mix results derived from the two. When $c>0$ the factor $s^{2}$ in
+\eqref{eq:twocartP} becomes $s(\,\cdot\,)$ --- one pole moves off the origin and
+only one free integrator survives.
+\end{caution}
+
+\begin{remark}[the same computation with $c$ and $b$ kept]\label{rem:fullTF}
+Carrying the full model \eqref{eq:eom} through the same steps gives, in matrix
+form,
+\[
+   \begin{bmatrix}
+     m_1s^{2}+(b+c)s+k & -(bs+k)\\[3pt]
+     -(bs+k) & m_2s^{2}+(b+c)s+k
+   \end{bmatrix}
+   \begin{bmatrix}P_1\\[3pt] P_2\end{bmatrix}
+   = \begin{bmatrix}U\\[3pt] 0\end{bmatrix},
+\]
+so that, writing
+$\Delta(s) = \bigl[m_1s^{2}+(b+c)s+k\bigr]\bigl[m_2s^{2}+(b+c)s+k\bigr]-(bs+k)^{2}$,
+one gets $Y(s)/U(s) = (bs+k)/\Delta(s)$.
+Setting $b=c=0$ recovers \eqref{eq:twocartP} exactly, which is a useful check on
+both. Two things are worth noticing. The coupling damper produces a finite zero
+at $s=-k/b$ --- the numerator is $bs+k$, never $0$. And with $c=0$ but $b>0$ one
+gets $\Delta(s)=s^{2}\bigl[m_1m_2s^{2}+(m_1+m_2)bs+(m_1+m_2)k\bigr]$: the double
+pole at the origin survives, since it comes from the absence of \emph{ground}
+friction, not from the absence of the damper.
+\end{remark}
+
+\subsection{From state space to transfer function}\label{sec:ss2tf}
+The two representations of Figure~\ref{fig:routes} are connected by a single
+computation. Start from \eqref{eq:std} with $x(0)=0$ and transform:
+$s\,X(s) = A\,X(s) + B\,U(s)$. Collect the $X$ terms, $\;(sI-A)X(s) = B\,U(s)$,
+and invert: $X(s) = (sI-A)^{-1}B\,U(s)$. Feeding this into $Y = CX + DU$,
+\begin{equation}\label{eq:ss2tf}
+   \boxed{\;Y(s) = \bigl[\,C\,(sI-A)^{-1}B + D\,\bigr]\,U(s),
+   \qquad P(s) = C(sI-A)^{-1}B + D. \;}
+\end{equation}
+For a SISO system this is a scalar rational function of $s$; in general it is a
+$p\times m$ matrix of them.
+
+\begin{remark}[keeping $x(0)$, and where the transfer function comes from]
+It is worth doing the computation once without assuming $x(0)=0$, because it
+shows exactly what the zero-initial-condition hypothesis buys. Transforming
+$\dot x = Ax+Bu$ in full gives $sX(s)-x(0) = AX(s)+BU(s)$, hence
+$(sI-A)X(s) = x(0) + BU(s)$ and
+\[
+   Y(s) = \underbrace{C(sI-A)^{-1}x(0)}_{\text{free response}}
+        + \underbrace{\bigl[C(sI-A)^{-1}B+D\bigr]U(s)}_{\text{forced response}} .
+\]
+The transfer function is the second term alone. The first term does not
+disappear in reality; it is simply not part of the definition, which is why
+Definition~\ref{def:tf} has to say ``initially at rest''.
+\end{remark}
+
+\begin{remark}
+Since $(sI-A)^{-1} = \operatorname{adj}(sI-A)/\det(sI-A)$, we may also write
+$P(s) = C\,\operatorname{adj}(sI-A)\,B/\det(sI-A) + D$, so every pole of $P(s)$
+is an eigenvalue of $A$ --- though not necessarily the other way round, since
+factors can cancel. The state-space model can therefore carry information the
+transfer function does not, which is one reason this course does not work with
+transfer functions alone. Going the other way, from $P(s)$ back to a quadruple
+$(A,B,C,D)$, is called \emph{realization}; it is always possible for a proper
+$P$, but the answer is far from unique. That is why the arrow between the two
+boxes in Figure~\ref{fig:routes} points both ways.
+\end{remark}
+
+\begin{example}[a realization, step by step]\label{ex:realization}
+Realize $P(s)=\dfrac{s^{2}+s+2}{s^{3}+3s^{2}+2s-1}$. Split it through an
+intermediate signal $\bar y$:
+\[
+   U \;\longrightarrow\; \boxed{\dfrac{1}{s^{3}+3s^{2}+2s-1}} \;\longrightarrow\;
+   \bar Y \;\longrightarrow\; \boxed{s^{2}+s+2} \;\longrightarrow\; Y .
+\]
+The first block is the differential equation
+$\dddot{\bar y}+3\ddot{\bar y}+2\dot{\bar y}-\bar y=u$, which has no input
+derivatives, so the choice $x_1=\bar y$, $x_2=\dot{\bar y}$, $x_3=\ddot{\bar y}$
+of \S3.1 turns it into
+\[
+   \dot x_1=x_2,\qquad \dot x_2=x_3,\qquad \dot x_3 = x_1-2x_2-3x_3+u .
+\]
+The second block is only differentiation of $\bar y$, and every derivative it needs
+is already a state: $y=\ddot{\bar y}+\dot{\bar y}+2\bar y = 2x_1+x_2+x_3$. Hence
+\[
+   A=\begin{bmatrix}0&1&0\\0&0&1\\1&-2&-3\end{bmatrix},\qquad
+   B=\begin{bmatrix}0\\0\\1\end{bmatrix},\qquad
+   C=\begin{bmatrix}2&1&1\end{bmatrix},\qquad D=0 .
+\]
+The pattern is general: the denominator coefficients fill the last row of $A$
+(with signs reversed), and the numerator coefficients become $C$. As a check,
+$(sI-A)^{-1}B=(1,\;s,\;s^{2})\tp/(s^{3}+3s^{2}+2s-1)$, and $C$ times that is
+$P(s)$.
+\end{example}
+
+%% ---------------------------------------------------------------- Lecture 5
+\lecturebreak{Lecture 5}{16 September 2026}
+
+\subsection{Poles, zeros, and properness}\label{sec:polezero}
+Every transfer function we shall meet is a ratio of polynomials,
+\begin{equation}\label{eq:rational}
+   G(s) = \frac{b_ms^{m}+\cdots+b_1s+b_0}
+               {s^{n}+a_{n-1}s^{n-1}+\cdots+a_1s+a_0},
+\end{equation}
+a \emph{rational} transfer function. Its \emph{degree} is $n$, the degree of the
+denominator, and its \emph{relative degree} is $n-m$. Comparing $n$ with $m$ gives
+four names:
+
+\begin{center}\small
+\begin{tabular}{@{}ll@{}}
+\toprule
+$n \ge m$ & proper\\
+$n > m$   & strictly proper\\
+$n = m$   & biproper\\
+$n < m$   & improper\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{remark}[why improper is unwelcome]
+An improper transfer function has more derivatives on the output side than the
+input side, so realising it requires \emph{differentiating} the input. A pure
+differentiator has $|j\omega|=\omega$: its gain grows without bound with
+frequency, so it amplifies exactly the high-frequency measurement noise one wants
+to suppress. Real plants are strictly proper, which is another way of saying that
+nothing responds instantaneously; controllers, which we build ourselves, are kept
+at least proper for the same reason.
+\end{remark}
+
+Factoring numerator and denominator,
+\begin{equation}\label{eq:factored}
+   G(s) = \frac{N(s)}{D(s)}
+        = k\,\frac{\prod_{i=1}^{m}(s-z_i)}{\prod_{i=1}^{n}(s-p_i)},
+\end{equation}
+where $N$ and $D$ are real polynomials. The $s\in\mathbb{C}$ with $D(s)=0$ are the
+\textbf{poles} --- there are $n$ of them --- and the $s$ with $N(s)=0$ are the
+\textbf{zeros}, of which there are $m$. Since $N$ and $D$ have \emph{real}
+coefficients, any pole or zero that is not real arrives together with its complex
+conjugate. Marking them in the complex plane, poles with $\times$ and zeros with
+$\circ$, gives the \emph{pole--zero map} (Figure~\ref{fig:pzmap}).
+
+\begin{figure}[htb]
+\centering
+\begin{tikzpicture}[>=Stealth,scale=0.95,
+   polex/.pic={\draw[thick] (-0.13,-0.13)--(0.13,0.13) (-0.13,0.13)--(0.13,-0.13);}]
+  \draw[->] (-3.5,0) -- (1.7,0) node[right] {$\operatorname{Re}s$};
+  \draw[->] (0,-2.1) -- (0,2.2) node[above] {$\operatorname{Im}s$};
+  \pic at (-2.7,0) {polex};
+  \pic at (-1.15,1.35) {polex};
+  \pic at (-1.15,-1.35) {polex};
+  \draw[thick] (-0.40,0.75) circle (0.14);
+  \draw[thick] (-0.40,-0.75) circle (0.14);
+  \draw[dashed,gray] (-1.15,1.35) -- (-1.15,-1.35);
+  \draw[dashed,gray] (-0.40,0.75) -- (-0.40,-0.75);
+  \node[anchor=west,lbl] at (0.30,1.80) {$\times$ pole \qquad $\circ$ zero};
+\end{tikzpicture}
+\caption{A pole--zero map. Because $N$ and $D$ have real coefficients, every
+non-real pole and zero is paired with its mirror image across the real axis
+(dashed); real ones stand alone.}
+\label{fig:pzmap}
+\end{figure}
+
+\subsection{Inverting by partial fractions}\label{sec:pfe}
+To go back from $Y(s)$ to $y(t)$ one almost never evaluates an inverse integral.
+Instead one splits a rational $Y(s)$ into a sum of simple terms, each of which is
+a line of the table of pairs. If $Y$ is strictly proper with poles $p_i$, there
+are three kinds of term.
+
+\smallskip\noindent\textbf{Distinct real poles.} Each simple pole $p_i$
+contributes $A_i/(s-p_i)$, and its coefficient is found by the \emph{cover-up
+rule}: multiply by $(s-p_i)$ and set $s=p_i$,
+\begin{equation}\label{eq:coverup}
+   A_i = \bigl[(s-p_i)\,Y(s)\bigr]_{s=p_i} .
+\end{equation}
+Each such term inverts to $A_i e^{p_i t}$.
+
+\smallskip\noindent\textbf{A repeated pole.} A pole of multiplicity $r$
+contributes $r$ terms, $B_1/(s-p)+B_2/(s-p)^{2}+\dots+B_r/(s-p)^{r}$. The top
+coefficient $B_r$ is found by cover-up with $(s-p)^{r}$; the lower ones by
+differentiating: $B_{r-k} = \frac{1}{k!}\frac{\d^{k}}{\d s^{k}}
+\bigl[(s-p)^{r}Y(s)\bigr]_{s=p}$. The term $B/(s-p)^{j}$ inverts to
+$B\,t^{j-1}e^{pt}/(j-1)!$ --- a repeated pole brings a polynomial in $t$ in front
+of the exponential.
+
+\smallskip\noindent\textbf{A complex pair.} Poles $-\alpha\pm j\omega$ are kept
+together as one real quadratic, $(s+\alpha)^{2}+\omega^{2}$, over a linear
+numerator. Completing it into the two shifted pairs of the table,
+\[
+   \frac{C(s+\alpha)+D\omega}{(s+\alpha)^{2}+\omega^{2}}
+   \;\longmapsto\;
+   e^{-\alpha t}\bigl(C\cos\omega t + D\sin\omega t\bigr),
+\]
+gives a decaying (for $\alpha>0$) oscillation. The real part of the poles sets the
+envelope, the imaginary part the frequency.
+
+\begin{example}[the three cases]\label{ex:pfe}
+\begin{enumerate}[label=(\alph*),itemsep=3pt,leftmargin=*]
+\item $Y(s)=\dfrac{s+5}{(s+1)(s+2)}=\dfrac{A}{s+1}+\dfrac{B}{s+2}$. Cover-up gives
+$A=\frac{s+5}{s+2}\big|_{s=-1}=4$ and $B=\frac{s+5}{s+1}\big|_{s=-2}=-3$, so
+$y(t)=4e^{-t}-3e^{-2t}$.
+\item $Y(s)=\dfrac{1}{s(s+1)^{2}}=\dfrac{A}{s}+\dfrac{B_1}{s+1}+\dfrac{B_2}{(s+1)^{2}}$.
+Cover-up gives $A=1$ and $B_2=\frac1s\big|_{s=-1}=-1$; differentiating,
+$B_1=\frac{\d}{\d s}\frac1s\big|_{s=-1}=-1$. Hence
+$y(t)=1-e^{-t}-t\,e^{-t}$.
+\item $Y(s)=\dfrac{1}{s^{2}+2s+5}=\dfrac{1}{(s+1)^{2}+2^{2}}
+=\dfrac12\cdot\dfrac{2}{(s+1)^{2}+2^{2}}$, so $y(t)=\tfrac12e^{-t}\sin 2t$.
+\end{enumerate}
+In (b) the two theorems of \S\ref{sec:fvt} check the answer:
+$\lim_{s\to\infty}sY(s)=0=y(0^{+})$ and $\lim_{s\to0}sY(s)=1=y(\infty)$.
+\end{example}
+
+\subsection{Where the poles of the output come from}\label{sec:outputpoles}
+With the plant in hand, the response to an input is
+$y(t) = \Lap^{-1}\{G(s)\,U(s)\}$, and the way to read that inverse transform is to
+split it into partial fractions. Suppose it comes out as
+\begin{equation}\label{eq:pfe}
+   Y(s) = \frac{A}{s-1} + \frac{B}{s-2} + \frac{C}{s+3}
+        + \frac{Ds+E}{s^{2}+\omega^{2}} .
+\end{equation}
+The first three denominators are poles of the \emph{plant}; the last is a pole of
+the \emph{input} --- an input $\sin\omega t$ would contribute exactly that factor.
+Inverting term by term gives one time function per pole, so
+\begin{center}
+\emph{the poles of the output are the poles of the plant together with the poles
+of the input.}
+\end{center}
+The plant's own poles appear whatever we drive it with, which is why the question
+of whether they are well placed is a question about the plant alone.
+
+\subsection{Block diagrams and the feedback loop}\label{sec:blocks}
+Because $Y(s)=P(s)U(s)$ is plain multiplication, systems wired together combine by
+algebra. Three connections cover almost every diagram (Figure~\ref{fig:blocks}):
+\begin{equation}\label{eq:blockalg}
+   \underbrace{\;Q(s)P(s)\;}_{\text{series}},
+   \qquad
+   \underbrace{\;P(s)+Q(s)\;}_{\text{parallel}},
+   \qquad
+   \underbrace{\;\frac{G(s)}{1+G(s)H(s)}\;}_{\text{negative feedback}} .
+\end{equation}
+The first two are immediate. The third is the one that matters, and it is worth
+deriving once. In the loop of Figure~\ref{fig:blocks}(c) the error is
+$E=R-HY$ and the output is $Y=GE$, so $Y=G(R-HY)$: the output appears on both
+sides, which is the algebraic trace of feedback. Collecting it,
+$(1+GH)Y=GR$, and the formula follows.
+
+The trade-off against the equations of motion of \S2 is worth stating. A block
+diagram makes \emph{connecting} systems trivial --- one multiplies, adds, or applies
+\eqref{eq:blockalg} --- but it hides the physics: a block labelled $P(s)$ no longer
+says which masses, springs and dampers are inside it. The differential equation is
+the opposite: every term has a physical meaning, and wiring two systems together
+means rewriting the equations. The two are used side by side for that reason.
+
+\begin{figure}[htb]
+\centering
+\begin{tikzpicture}[>=Stealth,node distance=9mm]
+  % (a) series
+  \node[lbl] (la) at (-1.1,0) {(a)};
+  \node (ua) at (0,0) {$U$};
+  \node[draw,minimum width=10mm,minimum height=7mm] (pa) at (1.5,0) {$P$};
+  \node[draw,minimum width=10mm,minimum height=7mm] (qa) at (3.2,0) {$Q$};
+  \node (ya) at (4.7,0) {$Y$};
+  \draw[->] (ua) -- (pa); \draw[->] (pa) -- (qa); \draw[->] (qa) -- (ya);
+  % (b) parallel
+  \node[lbl] at (6.0,0) {(b)};
+  \node (ub) at (6.8,0) {$U$};
+  \coordinate (sb) at (7.4,0);
+  \node[draw,minimum width=10mm,minimum height=7mm] (pb) at (8.6,0.55) {$P$};
+  \node[draw,minimum width=10mm,minimum height=7mm] (qb) at (8.6,-0.55) {$Q$};
+  \node[sumc] (jb) at (9.9,0) {};
+  \node (yb) at (10.9,0) {$Y$};
+  \draw (ub) -- (sb); \fill (sb) circle (1.2pt);
+  \draw[->] (sb) |- (pb); \draw[->] (sb) |- (qb);
+  \draw[->] (pb) -| node[pos=0.8,right,lbl] {$+$} (jb);
+  \draw[->] (qb) -| node[pos=0.8,right,lbl] {$+$} (jb);
+  \draw[->] (jb) -- (yb);
+  % (c) feedback
+  \node[lbl] at (1.2,-2.2) {(c)};
+  \node (rc) at (2.0,-2.2) {$R$};
+  \node[sumc] (sc) at (3.1,-2.2) {};
+  \node[draw,minimum width=10mm,minimum height=7mm] (gc) at (4.9,-2.2) {$G$};
+  \coordinate (tc) at (6.5,-2.2);
+  \node (yc) at (7.4,-2.2) {$Y$};
+  \node[draw,minimum width=10mm,minimum height=7mm] (hc) at (4.9,-3.3) {$H$};
+  \draw[->] (rc) -- node[pos=0.75,above,lbl] {$+$} (sc);
+  \draw[->] (sc) -- node[above,sig] {$E$} (gc);
+  \draw[->] (gc) -- (yc);
+  \fill (tc) circle (1.2pt);
+  \draw[->] (tc) |- (hc);
+  \draw[->] (hc) -| node[pos=0.85,left,lbl] {$-$} (sc);
+\end{tikzpicture}
+\caption{(a) Series: $Y=QPU$. (b) Parallel: $Y=(P+Q)U$. (c) Negative feedback:
+$Y=\frac{G}{1+GH}R$.}
+\label{fig:blocks}
+\end{figure}
+
+In the standard control loop the forward path is a controller followed by the
+plant, $G=P(s)C(s)$, and the output is fed back directly, $H=1$. The reference
+$r$ is what we want $y$ to be, and the controller acts on the error $e=r-y$:
+\begin{equation}\label{eq:closedloop}
+   \frac{Y(s)}{R(s)} = \frac{P(s)C(s)}{1+P(s)C(s)},
+   \qquad
+   \frac{E(s)}{R(s)} = \frac{1}{1+P(s)C(s)} .
+\end{equation}
+
+\begin{definition}[loop transfer function]\label{def:loop}
+The product of all the blocks met in going once around the loop,
+\[
+   L(s) = P(s)\,C(s)
+\]
+(more generally $G(s)H(s)$), is the \emph{loop transfer function} --- also called
+the \emph{loop gain}, or the \emph{open-loop} transfer function. The equation
+\begin{equation}\label{eq:chareq}
+   1+L(s)=0
+\end{equation}
+is the \emph{characteristic equation} of the closed loop.
+\end{definition}
+
+Every closed-loop transfer function in \eqref{eq:closedloop} has the same
+denominator $1+L$. Writing $L=N_L/D_L$ as a ratio of polynomials,
+\[
+   \frac{L}{1+L} = \frac{N_L}{D_L+N_L},
+\]
+so the closed-loop poles are the roots of $D_L+N_L$, equivalently of
+\eqref{eq:chareq}. This is the precise sense in which \emph{feedback moves poles}:
+the plant alone has the roots of $D_L$; closing the loop replaces them by the
+roots of $D_L+N_L$, and the controller $C$ is our handle on the difference.
+
+\begin{example}[the held mass, as a loop]\label{ex:massloop}
+Go back to \S1.3 and measure everything from the target height, $e=h-y$. The
+plant from force to height is $P(s)=1/(ms^{2})$, and the feedback law
+\eqref{eq:pd} is, apart from the gravity-compensating constant, the controller
+$C(s)=k+cs$. Then
+\[
+   L(s) = \frac{k+cs}{ms^{2}},
+   \qquad
+   1+L(s) = \frac{ms^{2}+cs+k}{ms^{2}} .
+\]
+The open loop has a double pole at the origin --- a free mass, which drifts. The
+closed loop has the roots of $ms^{2}+cs+k$, which for $c,k>0$ lie in the left
+half-plane. The gains have become an \emph{effective damping} $c$ and an
+\emph{effective stiffness} $k$ that the free mass did not have, and that is the
+whole content of ``feedback stabilised it''.
+\end{example}
+
+\begin{question}
+Given a plant $P$ and a proposed controller $C$, is the closed loop stable? One
+answer is to compute the roots of $D_L+N_L$. Section~\ref{sec:nyquist} gives a
+second answer, which needs only the graph of $L(j\omega)$ --- something one can
+measure --- and which tells us not just \emph{whether} the loop is stable but
+\emph{how far} it is from losing stability.
+\end{question}
+
+%% =============================================================== Part IV
+\partdivider{Part IV --- Frequency Response and Stability}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Frequency Response and Bode Plots}\label{sec:freq}
+
+\subsection{Stable plants}
+\begin{definition}[stable plant]\label{def:stable}
+A plant is \emph{stable} when every pole has strictly negative real part.
+\end{definition}
+
+\begin{remark}[why this section begins with stability]
+Everything below evaluates $P$ on the imaginary axis, at $s=j\omega$ --- that is,
+it trades the Laplace transform for the Fourier transform --- and that substitution
+is only legitimate when the Laplace integral actually converges there. For a
+stable plant it does, and $P(j\omega)$ is the Fourier transform of the impulse
+response --- something one can measure by driving the plant with a sinusoid. If a
+pole sits in the right half-plane the imaginary axis lies outside the region of
+convergence, the response to a sinusoid grows without bound, and the symbol
+$P(j\omega)$ is not the frequency response of anything. Stability is a hypothesis
+of this whole section, not a side remark.
+\end{remark}
+
+\subsection{Sinusoid in, sinusoid out}
+Drive a stable plant with $\sin\omega t$ and wait for the transient to die away.
+What is left is a sinusoid \emph{at the same frequency}:
+\begin{equation}\label{eq:freqresp}
+   \sin\omega t \;\longmapsto\; A\sin(\omega t+\theta),
+   \qquad A = |P(j\omega)|,\qquad \theta = \angle P(j\omega).
+\end{equation}
+Only two numbers change, and both are read off the single complex number
+$P(j\omega)$: its magnitude scales the amplitude, its argument shifts the phase.
+As functions of $\omega$ the pair is the \emph{frequency response}. This is the
+practical reason transfer functions are worth having: it turns a differential
+equation into a gain and a phase shift, one frequency at a time.
+
+\begin{proof}[Why \eqref{eq:freqresp} holds]
+The input transform is $\omega/(s^{2}+\omega^{2})$, so by \S\ref{sec:outputpoles}
+\[
+   Y(s) = P(s)\,\frac{\omega}{s^{2}+\omega^{2}}
+        = \frac{as+b}{s^{2}+\omega^{2}} + \bigl(\text{terms from the poles of }P\bigr).
+\]
+The plant is stable, so the second group dies out, and what remains is
+$y_{ss}(t) = a\cos\omega t+(b/\omega)\sin\omega t$. To find $a$ and $b$, multiply
+both sides by $s-j\omega$ and set $s=j\omega$; the plant terms vanish and
+\[
+   P(j\omega)\,\frac{\omega}{2j\omega} = \frac{a\,j\omega+b}{2j\omega}
+   \quad\Longrightarrow\quad
+   P(j\omega) = \frac{b}{\omega} + j a .
+\]
+So $b/\omega=|P(j\omega)|\cos\angle P(j\omega)$ and $a=|P(j\omega)|\sin\angle
+P(j\omega)$, and the sum-of-angles formula collapses $y_{ss}$ to
+$|P(j\omega)|\sin\bigl(\omega t+\angle P(j\omega)\bigr)$.
+\end{proof}
+
+\begin{example}[two frequencies at once]
+Feed $u(t)=2\sin t+3\cos(2t+1)$ into $P(s)=1/(s+1)$. By linearity each term is
+handled on its own, and a cosine obeys the same rule as a sine. At $\omega=1$,
+$P(j)=1/(1+j)$ has magnitude $1/\sqrt2$ and phase $-\pi/4$; at $\omega=2$,
+$P(2j)=1/(1+2j)$ has magnitude $1/\sqrt5$ and phase $-\arctan2\approx-63.4^\circ$.
+Hence
+\[
+   y_{ss}(t) = \sqrt2\,\sin\!\Bigl(t-\frac\pi4\Bigr)
+             + \frac{3}{\sqrt5}\cos\bigl(2t+1-\arctan 2\bigr).
+\]
+The higher frequency is both attenuated more and delayed more: $1/(s+1)$ is a
+low-pass filter, which the Bode plot of the next subsection shows at a glance.
+\end{example}
+
+\subsection{The Bode plot}
+The frequency response is drawn as two graphs against $\log_{10}\omega$: the
+magnitude in decibels,
+\[
+   20\log_{10}|P(j\omega)| ,
+\]
+and the phase $\angle P(j\omega)$. Together they are the \emph{Bode plot}.
+
+Both logarithms earn their place. A transfer function is a \emph{product} of
+factors, and taking the logarithm of the magnitude turns that product into a
+\emph{sum}, so each factor contributes its own piece and the whole is obtained by
+adding the pieces up. Putting $\log\omega$ on the horizontal axis then makes each
+of those pieces a straight line over most of its range.
+
+\subsection{Building the magnitude from the factors}
+Take, for example,
+\begin{equation}\label{eq:bodeex}
+   P(s) = \frac{K(s+z_1)(s+z_2)}
+               {(s+p_1)(s+p_2)^{2}\bigl(s^{2}+2\zeta\omega_n s+\omega_n^{2}\bigr)} .
+\end{equation}
+Taking $20\log_{10}$ of the magnitude turns every factor into a term:
+\begin{equation}\label{eq:bodesum}
+\begin{aligned}
+   20\log|P| = 20\bigl(&\log|s+z_1| + \log|s+z_2| - \log|s+p_1| \\
+                       &- 2\log|s+p_2| - \log|s^{2}+2\zeta\omega_n s+\omega_n^{2}|\bigr),
+\end{aligned}
+\end{equation}
+evaluated at $s=j\omega$. Numerator factors enter with a plus, denominator factors
+with a minus, and a repeated factor enters with its multiplicity --- hence the
+$2$ in front of $\log|s+p_2|$.
+
+Each first-order factor is then a single bend (Figure~\ref{fig:bode}). For
+$s+z_1$ at $s=j\omega$,
+\[
+   20\log|j\omega+z_1| = 10\log_{10}\bigl(\omega^{2}+z_1^{2}\bigr)
+   \;\approx\;
+   \begin{cases}
+      20\log z_1, & \omega \ll z_1,\\[2pt]
+      20\log \omega, & \omega \gg z_1,
+   \end{cases}
+\]
+so the asymptotes are a horizontal line and a line of slope $+20$\,dB per decade,
+meeting at the \emph{corner frequency} $\omega=z_1$. At the corner itself the true
+value is $20\log(z_1\sqrt2) = 20\log z_1 + 3.01$\,dB: the curve passes $3$\,dB
+\emph{above} the corner. A denominator factor gives the same picture upside down
+--- slope $-20$\,dB/decade and $3$\,dB \emph{below} --- and the repeated factor
+$(s+p_2)^{2}$ doubles both, to $-40$\,dB/decade.
+
+\begin{figure}[htb]
+\centering
+\begin{tikzpicture}[>=Stealth,x=1.75cm,y=0.085cm]
+  % ---- axes ----
+  \draw[->] (-1.62,0) -- (1.80,0) node[below right,lbl] {$\log_{10}\omega$};
+  \draw[->] (-1.5,-6) -- (-1.5,35);
+  \node[rotate=90,anchor=south,lbl] at (-1.78,16) {$20\log_{10}|j\omega+z_1|$};
+  % ---- corner ----
+  \draw[dashed,gray] (0,-6) -- (0,33);
+  \node[below,lbl] at (0,-1.5) {$\log_{10}z_1$};
+  % ---- true curve ----
+  \draw[gray!65,thick] plot[domain=-1.5:1.5,samples=90,smooth,variable=\u]
+        (\u,{10*log10(1+pow(10,2*\u))});
+  % ---- asymptotes ----
+  \draw[thick] (-1.5,0) -- (0,0);
+  \draw[thick] (0,0) -- (1.5,30);
+  % ---- 3 dB at the corner ----
+  \node[circle,fill,inner sep=1.1pt] at (0,3.01) {};
+  \node[left,lbl] at (-0.05,7) {$3$\,dB};
+  \node[above left,lbl] at (1.28,29) {$+20$\,dB/decade};
+\end{tikzpicture}
+\caption{One first-order factor. The two straight asymptotes meet at the corner
+frequency $\omega=z_1$; the true magnitude (grey) runs $3$\,dB above the corner.
+A Bode magnitude plot is built by adding one such picture per factor.}
+\label{fig:bode}
+\end{figure}
+
+\subsection{Phase by adding angles}\label{sec:phase}
+The phase is even easier, because the same factorisation is already a product of
+complex numbers. Writing each factor in polar form at $s=j\omega$,
+\[
+   P(j\omega)
+   = \frac{\prod_i M_i e^{\,j\theta_i}}{\prod_j M'_j e^{\,j\theta'_j}} ,
+   \qquad\text{so}\qquad
+   \angle P(j\omega) = \sum_i \theta_i - \sum_j \theta'_j .
+\]
+Each factor's angle is measured separately and they are simply added and
+subtracted --- the phase plot, like the magnitude plot, is assembled one factor at
+a time. For a first-order factor the angle is
+\[
+   \angle(j\omega+z_1) = \arctan\frac{\omega}{z_1},
+\]
+which climbs from $0^\circ$ at low frequency to $90^\circ$ at high frequency and
+passes $45^\circ$ exactly at the corner. Almost all of the change happens within a
+decade on either side, so the usual straight-line sketch holds $0^\circ$ up to
+$z_1/10$, rises linearly in $\log\omega$ to $90^\circ$ at $10z_1$, and stays there.
+A denominator factor contributes the negative of this.
+
+\begin{remark}[a geometric reading]\label{rem:vectors}
+$j\omega+z_1 = j\omega-(-z_1)$ is the vector from the zero at $-z_1$ to the point
+$j\omega$ on the imaginary axis. As $\omega$ runs up the axis, its length is the
+factor's magnitude and its angle is the factor's phase. Every factor of
+$P(j\omega)$ is such a vector, drawn from a pole or a zero to $j\omega$: the
+magnitude of $P$ is the product of the zero-vector lengths divided by the product
+of the pole-vector lengths, and the phase is the sum of the zero-vector angles
+minus the sum of the pole-vector angles. The same picture, with $j\omega$ replaced
+by a point running around a closed curve, is the key to
+Section~\ref{sec:nyquist}.
+\end{remark}
+
+%% ---------------------------------------------------------------- Lecture 6
+\lecturebreak{Lecture 6}{21 September 2026}
+
+\subsection{The second-order system and the damping ratio}\label{sec:second}
+The quadratic factor in \eqref{eq:bodeex} deserves its own treatment: it is the one
+factor whose Bode plot the asymptotes do \emph{not} describe well, and it is the
+transfer function of every damped oscillator. The standard second-order system is
+\begin{equation}\label{eq:second}
+   G(s) = \frac{\omega_n^{2}}{s^{2}+2\zeta\omega_n s+\omega_n^{2}},
+   \qquad \omega_n>0,\quad \zeta\ge 0,
+\end{equation}
+normalised so that $G(0)=1$. The two parameters have names: $\omega_n$ is the
+\emph{natural frequency} and $\zeta$ the \emph{damping ratio}. Both are forced on
+us by physics. A mass on a spring with a damper, $m\ddot q+b\dot q+kq=ku$, divided
+through by $m$ is exactly \eqref{eq:second} with
+\begin{equation}\label{eq:zetawn}
+   \omega_n = \sqrt{k/m},\qquad
+   \zeta = \frac{b}{2\sqrt{km}} ,
+\end{equation}
+so $\omega_n$ is the frequency at which the system would oscillate if there were no
+damping, and $\zeta$ measures the actual damping against the amount $2\sqrt{km}$
+that just suppresses oscillation. Because the damping term is written
+$2\zeta\omega_n s$ and not $2\zeta s$, $\zeta$ is a pure number, and everything
+said below about $\zeta$ holds whatever the time scale of the system.
+
+\smallskip\noindent\textbf{Poles.} The roots of $s^{2}+2\zeta\omega_n s+\omega_n^{2}$ are
+\[
+   s = -\zeta\omega_n \pm \omega_n\sqrt{\zeta^{2}-1},
+\]
+and the value of $\zeta$ sorts the system into four regimes:
+\begin{center}\small
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{}lll@{}}
+\toprule
+$\zeta>1$   & overdamped        & two distinct negative real poles\\
+$\zeta=1$   & critically damped & a double pole at $-\omega_n$\\
+$0<\zeta<1$ & underdamped       & $-\zeta\omega_n\pm j\omega_d$, \quad $\omega_d=\omega_n\sqrt{1-\zeta^{2}}$\\
+$\zeta=0$   & undamped          & $\pm j\omega_n$, on the imaginary axis\\
+\bottomrule
+\end{tabular}
+\end{center}
+In the underdamped case, which is the interesting one, the poles lie on the circle
+$|s|=\omega_n$, and the line from the origin to either pole makes an angle
+$\theta$ with the negative real axis given by
+\begin{equation}\label{eq:zetaangle}
+   \cos\theta = \zeta
+\end{equation}
+(Figure~\ref{fig:secondpoles}). Distance from the origin is frequency; the angle is
+damping. Lines of constant $\zeta$ are rays from the origin.
+
+\begin{figure}[htb]
+\centering
+\begin{tikzpicture}[>=Stealth,scale=1.0,
+   polex/.pic={\draw[thick] (-0.12,-0.12)--(0.12,0.12) (-0.12,0.12)--(0.12,-0.12);}]
+  \draw[->] (-2.9,0) -- (1.3,0) node[right] {$\operatorname{Re}s$};
+  \draw[->] (0,-2.4) -- (0,2.5) node[above] {$\operatorname{Im}s$};
+  \draw[dashed,gray] (90:2) arc (90:270:2);
+  \draw[thin] (0,0) -- (-1,1.732);
+  \draw[thin] (0,0) -- (-1,-1.732);
+  \pic at (-1,1.732) {polex};
+  \pic at (-1,-1.732) {polex};
+  \draw[dotted] (-1,1.732) -- (-1,0);
+  \draw[dotted] (-1,1.732) -- (0,1.732);
+  \node[below,lbl] at (-1,-0.02) {$-\zeta\omega_n$};
+  \node[right,lbl] at (0.02,1.732) {$j\omega_d$};
+  \draw (-0.6,0) arc (180:120:0.6);
+  \node[lbl] at (-0.78,0.33) {$\theta$};
+  \node[lbl,above left] at (-0.48,0.86) {$\omega_n$};
+  \node[lbl,anchor=west] at (0.35,-1.25) {$\cos\theta=\zeta$};
+\end{tikzpicture}
+\caption{The underdamped pole pair of \eqref{eq:second}, drawn for $\zeta=0.5$.
+The poles sit on the circle of radius $\omega_n$; the angle $\theta$ they make with
+the negative real axis is fixed by the damping ratio alone.}
+\label{fig:secondpoles}
+\end{figure}
+
+\smallskip\noindent\textbf{Time response.} For $0<\zeta<1$, the partial fractions
+of \S\ref{sec:pfe} applied to the unit step, $Y(s)=G(s)/s$, give
+\begin{equation}\label{eq:secondstep}
+   y(t) = 1 - \frac{e^{-\zeta\omega_n t}}{\sqrt{1-\zeta^{2}}}\,
+          \sin\bigl(\omega_d t+\theta\bigr),
+   \qquad \theta=\arccos\zeta .
+\end{equation}
+Every piece of this is read off the pole: the real part $-\zeta\omega_n$ sets the
+decaying envelope, the imaginary part $\omega_d$ the frequency of the ringing
+(Figure~\ref{fig:secondstep}). Small $\zeta$ gives a quick but badly ringing
+response; $\zeta$ near $1$ a sluggish one that barely overshoots. Two numbers
+summarise the curve, the peak overshoot and the settling time:
+\begin{equation}\label{eq:overshoot}
+   M_p = e^{-\pi\zeta/\sqrt{1-\zeta^{2}}},
+   \qquad
+   t_s \approx \frac{4}{\zeta\omega_n}\quad\text{(to within $2\%$)} .
+\end{equation}
+The overshoot depends on $\zeta$ alone, that is on the \emph{angle} of the poles;
+the settling time on $\zeta\omega_n$ alone, that is on their \emph{distance from
+the imaginary axis}.
+
+\begin{figure}[htb]
+\centering
+\begin{tikzpicture}[>=Stealth,x=0.46cm,y=2.1cm]
+  \draw[->] (0,0) -- (14.7,0) node[right,lbl] {$\omega_n t$};
+  \draw[->] (0,0) -- (0,1.95) node[above,lbl] {$y(t)$};
+  \draw[dotted,gray] (0,1) -- (14,1);
+  \foreach \tk in {0,2,...,14}{\draw (\tk,0) -- (\tk,-0.04) node[below,lbl] {\tk};}
+  \foreach \yk in {0.5,1,1.5}{\draw (0,\yk) -- (-0.18,\yk) node[left,lbl] {\yk};}
+  \draw[gray] plot[domain=0:14,samples=150,smooth]
+    (\x,{1-exp(-0.1*\x)/sqrt(0.99)*sin(deg(sqrt(0.99)*\x)+acos(0.1))});
+  \draw[dashed] plot[domain=0:14,samples=120,smooth]
+    (\x,{1-exp(-0.3*\x)/sqrt(0.91)*sin(deg(sqrt(0.91)*\x)+acos(0.3))});
+  \draw[thick] plot[domain=0:14,samples=100,smooth]
+    (\x,{1-exp(-0.7*\x)/sqrt(0.51)*sin(deg(sqrt(0.51)*\x)+acos(0.7))});
+  \draw[thick,dotted] plot[domain=0:14,samples=80,smooth] (\x,{1-(1+\x)*exp(-\x)});
+  % legend
+  \begin{scope}[shift={(9.2,0.14)}]
+    \draw[gray] (0,0.36) -- (1.4,0.36); \node[right,lbl] at (1.5,0.36) {$\zeta=0.1$};
+    \draw[dashed] (0,0.24) -- (1.4,0.24); \node[right,lbl] at (1.5,0.24) {$\zeta=0.3$};
+    \draw[thick] (0,0.12) -- (1.4,0.12); \node[right,lbl] at (1.5,0.12) {$\zeta=0.7$};
+    \draw[thick,dotted] (0,0) -- (1.4,0); \node[right,lbl] at (1.5,0) {$\zeta=1$};
+  \end{scope}
+\end{tikzpicture}
+\caption{Unit-step responses of \eqref{eq:second} against $\omega_n t$. Less damping
+means a higher first peak and slower-dying ringing; $\zeta=1$ does not overshoot at
+all.}
+\label{fig:secondstep}
+\end{figure}
+
+\begin{remark}[the semester's goal, restated]
+Question~\ref{q:goal} asks the carts to settle within $5$ seconds. By
+\eqref{eq:overshoot}, how fast a response settles and how far it overshoots are
+both statements about \emph{where the dominant poles are}: settling within $5$\,s
+asks for $\zeta\omega_n \gtrsim 4/5$, and the overshoot is fixed by the angle
+$\theta$. The open-loop two-cart system cannot be told where to put its poles.
+A closed loop can --- that is what \S\ref{sec:blocks} showed feedback doing.
+\end{remark}
+
+\smallskip\noindent\textbf{Frequency response.} On the imaginary axis,
+\begin{equation}\label{eq:secondfreq}
+   G(j\omega) = \frac{\omega_n^{2}}{(\omega_n^{2}-\omega^{2})+j\,2\zeta\omega_n\omega} .
+\end{equation}
+With the normalised frequency $u=\omega/\omega_n$,
+\[
+   |G(j\omega)| = \frac{1}{\sqrt{(1-u^{2})^{2}+(2\zeta u)^{2}}},
+   \qquad
+   \angle G(j\omega) = -\operatorname{atan2}\bigl(2\zeta u,\;1-u^{2}\bigr).
+\]
+The asymptotes are what one expects of a quadratic: for $u\ll1$ the magnitude is
+$1$ (0\,dB) and the phase $0^\circ$; for $u\gg1$ the magnitude is $1/u^{2}$, a line
+of slope $-40$\,dB/decade, and the phase is $-180^\circ$. They meet at
+$\omega=\omega_n$. What happens \emph{at} the corner, however, is decided by
+$\zeta$. Setting $u=1$ in \eqref{eq:secondfreq},
+\[
+   G(j\omega_n) = \frac{1}{j\,2\zeta},
+   \qquad
+   |G(j\omega_n)| = \frac{1}{2\zeta},
+   \qquad
+   \angle G(j\omega_n) = -90^\circ .
+\]
+The phase at the corner is $-90^\circ$ for every $\zeta$, but the magnitude is
+$1/(2\zeta)$, which is large when the damping is small: $\zeta=0.1$ puts the curve
+$14$\,dB above the asymptotes (Figure~\ref{fig:secondbode}). A first-order factor
+never strays more than $3$\,dB from its asymptotes; the quadratic can carry a tall
+\emph{resonant peak}. Setting the derivative of $|G|^{2}$ with respect to $u$ to
+zero shows that for $\zeta<1/\sqrt2$ the peak lies at
+\begin{equation}\label{eq:resonance}
+   \omega_r = \omega_n\sqrt{1-2\zeta^{2}},
+   \qquad
+   M_r = |G(j\omega_r)| = \frac{1}{2\zeta\sqrt{1-\zeta^{2}}},
+\end{equation}
+and that for $\zeta\ge1/\sqrt2\approx0.707$ there is no peak at all. The phase,
+meanwhile, falls from $0^\circ$ to $-180^\circ$ more and more abruptly as $\zeta$
+shrinks; in the limit $\zeta\to0$ it jumps by $180^\circ$ at $\omega_n$.
+
+\begin{figure}[htb]
+\centering
+\begin{tikzpicture}[>=Stealth,x=2.7cm]
+  % ---------------- magnitude ----------------
+  \begin{scope}[y=0.058cm]
+    \draw[->] (-1,0) -- (1.13,0) node[right,lbl] {$\log_{10}(\omega/\omega_n)$};
+    \draw[->] (-1,-42) -- (-1,20) node[above,lbl] {dB};
+    \foreach \d in {-40,-20,0}{\draw (-1,\d) -- (-1.03,\d) node[left,lbl] {\d};}
+    \draw[dotted,gray] (0,-42) -- (0,18);
+    \draw[gray!70,densely dashed] (-1,0) -- (0,0) -- (1,-40);
+    \draw[gray] plot[domain=-1:1,samples=160,smooth]
+      (\x,{-10*log10(pow(1-pow(10,2*\x),2)+pow(0.2*pow(10,\x),2))});
+    \draw[dashed] plot[domain=-1:1,samples=120,smooth]
+      (\x,{-10*log10(pow(1-pow(10,2*\x),2)+pow(0.6*pow(10,\x),2))});
+    \draw[thick] plot[domain=-1:1,samples=100,smooth]
+      (\x,{-10*log10(pow(1-pow(10,2*\x),2)+pow(1.4*pow(10,\x),2))});
+    \draw[thick,dotted] plot[domain=-1:1,samples=100,smooth]
+      (\x,{-10*log10(pow(1-pow(10,2*\x),2)+pow(2.0*pow(10,\x),2))});
+    \begin{scope}[shift={(-0.93,-33)}]
+      \draw[gray] (0,9) -- (0.2,9); \node[right,lbl] at (0.22,9) {$\zeta=0.1$};
+      \draw[dashed] (0,4.5) -- (0.2,4.5); \node[right,lbl] at (0.22,4.5) {$\zeta=0.3$};
+      \draw[thick] (0.78,9) -- (0.98,9); \node[right,lbl] at (1.0,9) {$\zeta=0.7$};
+      \draw[thick,dotted] (0.78,4.5) -- (0.98,4.5); \node[right,lbl] at (1.0,4.5) {$\zeta=1$};
+    \end{scope}
+  \end{scope}
+  % ---------------- phase ----------------
+  \begin{scope}[yshift=-4.3cm,y=0.017cm]
+    \draw[->] (-1,0) -- (1.13,0) node[right,lbl] {$\log_{10}(\omega/\omega_n)$};
+    \draw[->] (-1,-190) -- (-1,12) node[above,lbl] {phase};
+    \foreach \d in {0,-90,-180}{\draw (-1,\d) -- (-1.03,\d) node[left,lbl] {$\d^\circ$};}
+    \draw[dotted,gray] (0,-190) -- (0,5);
+    \draw[dotted,gray] (-1,-90) -- (1,-90);
+    \draw[gray] plot[domain=-1:1,samples=160,smooth]
+      (\x,{-atan2(0.2*pow(10,\x),1-pow(10,2*\x))});
+    \draw[dashed] plot[domain=-1:1,samples=120,smooth]
+      (\x,{-atan2(0.6*pow(10,\x),1-pow(10,2*\x))});
+    \draw[thick] plot[domain=-1:1,samples=100,smooth]
+      (\x,{-atan2(1.4*pow(10,\x),1-pow(10,2*\x))});
+    \draw[thick,dotted] plot[domain=-1:1,samples=100,smooth]
+      (\x,{-atan2(2.0*pow(10,\x),1-pow(10,2*\x))});
+  \end{scope}
+\end{tikzpicture}
+\caption{Bode magnitude (top) and phase (bottom) of the second-order system
+\eqref{eq:second}. The grey dashed lines in the top panel are the asymptotes. Every
+curve passes $-90^\circ$ at $\omega=\omega_n$; the peak there,
+$20\log_{10}(1/2\zeta)$, grows without bound as $\zeta\to0$.}
+\label{fig:secondbode}
+\end{figure}
+
+\begin{remark}[one fact, three pictures]
+Light damping shows up three times: as poles close to the imaginary axis, as
+ringing in the step response, and as a resonant peak in the Bode plot. These are
+the same fact seen three ways. A pole at $-\zeta\omega_n+j\omega_d$ lies a distance
+$\zeta\omega_n$ from the imaginary axis, so as $j\omega$ sweeps past it the
+pole-vector of Remark~\ref{rem:vectors} becomes very short --- and a short vector
+in the denominator is a large magnitude. Indeed at $\omega=\omega_d$ that vector
+has length $\zeta\omega_n$ and the other pole-vector has length about $2\omega_d$,
+which gives $|G|\approx\omega_n^{2}/(2\zeta\omega_n\omega_d)=M_r$.
+\end{remark}
+
+\begin{example}[resonance with no damping]
+Push the limit $\zeta\to0$ all the way. With $\zeta=0$, $G(s)=\omega_n^{2}/(s^{2}+\omega_n^{2})$
+has its poles on the imaginary axis, so it is not stable and \eqref{eq:freqresp}
+does not apply. Drive it exactly at its natural frequency, $u=\sin\omega_n t$:
+\[
+   Y(s) = \frac{\omega_n^{2}}{s^{2}+\omega_n^{2}}\cdot\frac{\omega_n}{s^{2}+\omega_n^{2}}
+        = \frac{\omega_n^{3}}{(s^{2}+\omega_n^{2})^{2}},
+   \qquad
+   y(t) = \tfrac12\bigl(\sin\omega_n t-\omega_n t\cos\omega_n t\bigr).
+\]
+The input's poles coincide with the plant's, the pole at $\pm j\omega_n$ becomes a
+double pole, and by \S\ref{sec:pfe} a double pole brings a factor of $t$: the
+oscillation grows linearly and without bound. This is resonance in its purest
+form, and the infinite peak of the $\zeta\to0$ Bode curve is its frequency-domain
+shadow.
+\end{example}
+
+\begin{remark}[dominant poles]\label{rem:dominant}
+Why study the second-order system so closely, when real plants have many poles?
+Because in a stable system each pole contributes a term $e^{p_it}$, and the terms
+from poles far to the left die out long before those from poles near the imaginary
+axis. The poles closest to the axis --- the \emph{dominant} poles --- therefore
+shape everything one sees after the first moments. When they are a complex pair
+well separated from the rest (and not nearly cancelled by a zero, which would make
+their residue small), an $n$th-order system behaves very nearly like the
+second-order system with those two poles. That is why $\zeta$, $\omega_n$, overshoot
+and settling time serve as the working vocabulary even for plants that are not
+second order.
+\end{remark}
+
+\subsection{A catalogue of elementary factors}\label{sec:catalogue}
+Every rational transfer function is a product of the factors below, so every Bode
+plot is a sum of their pictures. The first-order factors are written in the
+normalised form that starts at $0$\,dB.
+
+\begin{center}\small
+\renewcommand{\arraystretch}{1.6}
+\begin{tabular}{@{}llll@{}}
+\toprule
+factor & magnitude & phase & at the corner\\
+\midrule
+$K>0$ & flat at $20\log_{10}K$ & $0^\circ$ & ($K<0$ adds $\pm180^\circ$)\\
+$s$ & $+20$\,dB/dec, $0$\,dB at $\omega=1$ & $+90^\circ$ & ---\\
+$1/s$ & $-20$\,dB/dec, $0$\,dB at $\omega=1$ & $-90^\circ$ & ---\\
+$1+s/z$ & $0$, then $+20$\,dB/dec from $\omega=z$ & $0^\circ\to+90^\circ$ & $+3$\,dB, $+45^\circ$\\
+$1/(1+s/p)$ & $0$, then $-20$\,dB/dec from $\omega=p$ & $0^\circ\to-90^\circ$ & $-3$\,dB, $-45^\circ$\\
+$\dfrac{\omega_n^{2}}{s^{2}+2\zeta\omega_n s+\omega_n^{2}}$ & $0$, then $-40$\,dB/dec from $\omega_n$ & $0^\circ\to-180^\circ$ & $1/(2\zeta)$, $-90^\circ$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{example}[a complete sketch]
+Take $P(s)=\dfrac{10(s+1)}{s(s+10)}=\dfrac{1+s}{s\,(1+s/10)}$. It is a product of
+an integrator, a first-order zero with corner $1$, and a first-order pole with corner
+$10$. Reading left to right: below $\omega=1$ only the integrator is active, so the
+magnitude falls at $-20$\,dB/decade through $0$\,dB at $\omega=1$ and the phase is
+$-90^\circ$; at $\omega=1$ the zero cancels the slope and the magnitude flattens at
+$0$\,dB while the phase rises toward $0^\circ$; at $\omega=10$ the pole brings the
+slope back to $-20$\,dB/decade and the phase back toward $-90^\circ$. The whole
+plot is three straight pieces joined at the corners $1$ and $10$.
+\end{example}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{The Nyquist Plot and Closed-Loop Stability}\label{sec:nyquist}
+
+\subsection{The question, restated}
+By \S\ref{sec:blocks}, the closed loop with loop transfer function $L=PC$ is stable
+exactly when the characteristic equation $1+L(s)=0$ has no roots with
+$\operatorname{Re}s\ge0$. Put
+\[
+   F(s) = 1+L(s) = \frac{D_L(s)+N_L(s)}{D_L(s)} .
+\]
+The \emph{zeros} of $F$ are the closed-loop poles --- unknown, and exactly what we
+want to locate. The \emph{poles} of $F$ are the poles of $L$, the open-loop poles
+--- known, since we know the plant and we chose the controller. The idea due to
+Nyquist is to count the unknown zeros in the right half-plane without computing
+them, by watching the phase of $F$ as $s$ travels around the boundary of that
+half-plane.
+
+\subsection{Counting by angles: the principle of the argument}\label{sec:argument}
+Let $\Gamma$ be a simple closed curve in the $s$-plane, traversed once
+\emph{clockwise}, and let $F$ be rational with no poles or zeros on $\Gamma$ itself.
+As $s$ goes around $\Gamma$, the point $F(s)$ traces a closed curve $F(\Gamma)$ in
+the $F$-plane (Figure~\ref{fig:argument}). Factor $F$ as in \eqref{eq:factored};
+by \S\ref{sec:phase},
+\[
+   \angle F(s) = \angle k + \sum_i \angle(s-z_i) - \sum_j \angle(s-p_j) .
+\]
+Now follow a single factor. If $z_i$ lies \emph{inside} $\Gamma$, the vector
+$s-z_i$ from $z_i$ to the moving point $s$ turns once all the way round as $s$
+circles $\Gamma$ --- clockwise, so its angle changes by $-2\pi$. If $z_i$ lies
+\emph{outside}, the vector swings to and fro but comes back to where it started:
+net change $0$. The same holds for each pole, with the opposite sign in
+$\angle F$. Adding up the factors:
+
+\begin{theorem}[principle of the argument]\label{thm:argument}
+Let $Z$ and $P$ be the numbers of zeros and poles of $F$ inside $\Gamma$, counted
+with multiplicity. As $s$ traverses $\Gamma$ once clockwise, $\angle F(s)$ changes
+by $-2\pi(Z-P)$ in total. That is, the curve $F(\Gamma)$ encircles the origin
+\[
+   N = Z - P
+\]
+times clockwise, a counterclockwise encirclement counting as $-1$.
+\end{theorem}
+
+For instance, put two points $a$, $b$ inside $\Gamma$ and a third point $c$
+outside. Then $F=s-a$ winds once clockwise around the origin; $F=(s-a)(s-b)$
+winds twice, because $\theta_a$ and $\theta_b$ each turn through a full circle; and
+$F=(s-a)(s-b)(s-c)$ \emph{still} winds twice, because $\theta_c$ only rocks within
+the wedge between the two tangents from $c$ to $\Gamma$. A pole reverses the sense:
+$F=1/(s-a)$ winds once \emph{counterclockwise}, since $\angle F=-\theta_a$.
+
+The angle count \emph{is} the proof: it is the phase rule of \S\ref{sec:phase}
+applied to a point that goes around a loop instead of up the imaginary axis. (In
+complex analysis the same count appears as
+$\frac{1}{2\pi j}\oint_\Gamma F'(s)/F(s)\,\d s = Z-P$ for a counterclockwise
+$\Gamma$: $F'/F=\sum_i 1/(s-z_i)-\sum_j 1/(s-p_j)$, and each term enclosed by
+$\Gamma$ contributes a residue of $+1$ or $-1$.)
+
+\begin{figure}[htb]
+\centering
+\begin{tikzpicture}[>=Stealth,
+   polex/.pic={\draw[thick] (-0.11,-0.11)--(0.11,0.11) (-0.11,0.11)--(0.11,-0.11);}]
+  % ---- s-plane ----
+  \begin{scope}
+    \node[lbl] at (-1.9,1.55) {$s$-plane};
+    \draw[thick] (0,0) ellipse (1.6 and 1.1);
+    \draw[->,thick] (100:1.6 and 1.1) arc[start angle=100,end angle=80,x radius=1.6,y radius=1.1];
+    \draw[->,thick] (-80:1.6 and 1.1) arc[start angle=-80,end angle=-100,x radius=1.6,y radius=1.1];
+    \node[lbl] at (1.35,-1.05) {$\Gamma$};
+    \draw[thick] (-0.35,0.15) circle (0.1);
+    \node[lbl,below] at (-0.35,0.03) {$z_1$};
+    \pic at (2.35,0.75) {polex};
+    \node[lbl,right] at (2.45,0.75) {$p_1$};
+    \coordinate (s) at (40:1.6 and 1.1);
+    \fill (s) circle (1.3pt); \node[lbl,above right] at (s) {$s$};
+    \draw[->] (-0.35,0.15) -- ($(s)+(-0.05,-0.03)$);
+    \draw[->,gray] (2.35,0.75) -- ($(s)+(0.06,0.0)$);
+  \end{scope}
+  % ---- F-plane ----
+  \begin{scope}[xshift=6.4cm]
+    \node[lbl] at (-1.6,1.55) {$F$-plane};
+    \draw[->] (-1.9,0) -- (1.9,0);
+    \draw[->] (0,-1.5) -- (0,1.6);
+    \draw[thick] plot[domain=0:360,samples=90,smooth,variable=\a]
+      ({0.25+1.25*cos(\a)+0.25*cos(2*\a)},{-0.95*sin(\a)+0.12*sin(3*\a)});
+    \draw[->,thick] (1.5,-0.1) -- (1.48,-0.3);
+    \fill (0,0) circle (1.3pt);
+    \node[lbl] at (1.45,1.05) {$F(\Gamma)$};
+  \end{scope}
+\end{tikzpicture}
+\caption{The principle of the argument. As $s$ goes once clockwise around $\Gamma$,
+the vector $s-z_1$ from the enclosed zero turns once clockwise, while the vector
+$s-p_1$ from the pole outside only rocks back and forth. With one zero and no pole
+inside, the image $F(\Gamma)$ encircles the origin once clockwise: $N=Z-P=1$.}
+\label{fig:argument}
+\end{figure}
+
+\subsection{The Nyquist contour and the Nyquist plot}
+To count right-half-plane roots, take $\Gamma$ to be the boundary of the right
+half-plane. The \emph{Nyquist contour} $\Gamma_N$ runs up the imaginary axis from
+$-jR$ to $+jR$ and returns along the semicircle $|s|=R$ through the right
+half-plane, clockwise, with $R\to\infty$ (Figure~\ref{fig:contour}). Its inside is
+the whole open right half-plane. If $L$ has poles \emph{on} the imaginary axis ---
+an integrator $1/s$, say --- $\Gamma_N$ is not allowed to pass through them. It
+detours around each one on a small semicircle of radius $\varepsilon\to0$ that
+bulges into the right half-plane, which leaves those poles outside.
+
+\begin{figure}[htb]
+\centering
+\begin{tikzpicture}[>=Stealth,scale=0.95,
+   polex/.pic={\draw[thick] (-0.11,-0.11)--(0.11,0.11) (-0.11,0.11)--(0.11,-0.11);}]
+  \fill[black!5] (0,-2.2) -- (0,-0.32) arc (-90:90:0.32) -- (0,2.2) arc (90:-90:2.2) -- cycle;
+  \draw[->] (-1.4,0) -- (3.0,0) node[right] {$\operatorname{Re}s$};
+  \draw[->] (0,-2.7) -- (0,2.75) node[above] {$\operatorname{Im}s$};
+  \draw[thick] (0,-2.2) -- (0,-0.32);
+  \draw[->,thick] (0,-2.2) -- (0,-1.15);
+  \draw[thick] (0,-0.32) arc (-90:90:0.32);
+  \draw[thick] (0,0.32) -- (0,2.2);
+  \draw[->,thick] (0,0.32) -- (0,1.35);
+  \draw[thick] (0,2.2) arc (90:-90:2.2);
+  \draw[->,thick] (45:2.2) arc (45:35:2.2);
+  \pic at (0,0) {polex};
+  \node[lbl,anchor=west] at (1.6,1.95) {$R\to\infty$};
+  \node[lbl,anchor=west] at (0.42,0.36) {$\varepsilon\to0$};
+  \node[lbl] at (1.05,-0.95) {RHP};
+\end{tikzpicture}
+\caption{The Nyquist contour $\Gamma_N$, traversed clockwise: up the imaginary axis,
+then back along a semicircle of infinite radius. Its inside (shaded) is the open
+right half-plane. A pole on the imaginary axis --- here at the origin --- is
+avoided by a small detour into the right half-plane.}
+\label{fig:contour}
+\end{figure}
+
+The image of $\Gamma_N$ under $L$ is the \emph{Nyquist plot} of $L$. Two facts make
+it easy to draw.
+\begin{itemize}[leftmargin=*,itemsep=2pt]
+\item If $L$ is strictly proper, $L(s)\to0$ as $|s|\to\infty$, so the whole large
+semicircle maps to the single point $0$. The plot is then just the curve
+$L(j\omega)$, $-\infty<\omega<\infty$ --- the frequency response, drawn in the
+complex plane instead of as two Bode graphs.
+\item Because $L$ has real coefficients, $L(-j\omega)=\overline{L(j\omega)}$: the
+half for $\omega<0$ is the mirror image, across the real axis, of the half for
+$\omega>0$.
+\end{itemize}
+In practice one plots $L(j\omega)$ for $\omega\ge0$ --- read straight off the Bode
+plot, since the distance from the origin is $|L(j\omega)|$ and the angle is
+$\angle L(j\omega)$ --- reflects it in the real axis, and adds whatever the small
+detours contribute.
+
+\subsection{The Nyquist stability criterion}
+Apply Theorem~\ref{thm:argument} to $F=1+L$ on $\Gamma_N$. The zeros of $F$ inside
+$\Gamma_N$ are the closed-loop poles in the right half-plane; the poles of $F$ inside
+are the open-loop poles there. And $F(\Gamma_N)$ is the Nyquist plot of $L$ shifted
+one unit to the right, so encircling the origin with $F$ is the same as encircling
+the point $-1$ with $L$. That is the whole criterion.
+
+\begin{keybox}
+\textbf{Nyquist stability criterion.} Let $P$ be the number of poles of $L(s)$ in
+the open right half-plane, and let $N$ be the number of times the Nyquist plot of
+$L$ encircles the point $-1$ clockwise (counterclockwise encirclements counted
+negative). Then the number of closed-loop poles in the right half-plane is
+\[
+   Z = N + P .
+\]
+The closed loop is stable if and only if $Z=0$, that is $N=-P$, and the plot does
+not pass through $-1$ (if it does, the closed loop has a pole on the imaginary
+axis). In particular, if $L$ is itself stable ($P=0$), the closed loop is stable if
+and only if the Nyquist plot does not encircle $-1$.
+
+\smallskip\noindent
+Counted the other way round, the same statement reads: \emph{the number of
+counterclockwise encirclements of $-1$ equals $P-Z$.}
+\end{keybox}
+
+\begin{remark}[why this is worth the trouble]
+Two things set the criterion apart from simply computing the roots of $D_L+N_L$.
+First, it needs only $L(j\omega)$, and that can be \emph{measured}: drive the open
+loop with sinusoids and record gain and phase, with no model of the plant at all.
+Second, it shows not only whether the loop is stable but how \emph{close} it is to
+instability. A plot that passes near $-1$ can be pushed across it by a small change
+of gain or phase --- by exactly the kind of modelling error that \S1 said we must
+expect.
+\end{remark}
+
+\subsection{Examples}
+\begin{example}[a stable open loop]\label{ex:nyq1}
+$L(s)=\dfrac{K}{(s+1)(s+2)(s+3)}$ with $K>0$. All open-loop poles are in the left
+half-plane, so $P=0$. At $s=j\omega$ the denominator is
+\[
+   (6-6\omega^{2}) + j\,(11\omega-\omega^{3}) .
+\]
+The plot starts at $L(0)=K/6$ on the positive real axis and moves clockwise through
+the fourth and third quadrants as the phase falls from $0^\circ$ toward
+$-270^\circ$. It crosses the negative real axis where the imaginary part of the
+denominator vanishes, at $\omega^{2}=11$, and there $L=K/(6-66)=-K/60$
+(Figure~\ref{fig:nyqex}, left, drawn for $K=20$). If $K<60$ the crossing lies to the
+right of $-1$ and there is no encirclement: $N=0$, $Z=0$, stable. If $K>60$ the plot
+encircles $-1$ twice clockwise: $N=2$, so two closed-loop poles lie in the right
+half-plane. At the boundary $K=60$ the plot passes through $-1$ at
+$\omega=\sqrt{11}$, and indeed
+\[
+   D_L+N_L = s^{3}+6s^{2}+11s+66 = (s+6)(s^{2}+11)
+\]
+has closed-loop poles exactly at $\pm j\sqrt{11}$ --- the frequency at which the plot
+meets $-1$.
+\end{example}
+
+\begin{example}[an integrator in the loop]\label{ex:nyq2}
+$L(s)=\dfrac{K}{s(s+1)}$ with $K>0$. The pole at the origin lies on the imaginary
+axis, so $\Gamma_N$ detours around it on $s=\varepsilon e^{j\phi}$ with $\phi$
+running from $-90^\circ$ to $+90^\circ$. There $L(s)\approx K/s =
+(K/\varepsilon)e^{-j\phi}$: a semicircle of enormous radius $K/\varepsilon$, swept
+from $+90^\circ$ to $-90^\circ$, that is clockwise through the right half of the
+plane. On the imaginary axis,
+\[
+   L(j\omega) = -\frac{K}{1+\omega^{2}} - j\,\frac{K}{\omega(1+\omega^{2})},
+\]
+so for $\omega>0$ the plot rises from far below along the asymptote
+$\operatorname{Re}L=-K$, stays in the third quadrant, and enters the origin with
+phase $-180^\circ$ as $\omega\to\infty$. Its imaginary part never vanishes, so it
+never crosses the negative real axis and $-1$ is never encircled. The detoured pole
+is not counted, so $P=0$; $N=0$; hence $Z=0$ and the loop is stable for every
+$K>0$. Directly: $D_L+N_L=s^{2}+s+K$, whose roots have negative real part for all
+$K>0$.
+\end{example}
+
+The detour always behaves as in this example. Near a simple pole $p$ on the
+imaginary axis, $L(s)\approx c/(s-p)$, and as the detour turns $s-p$ through
+$+180^\circ$ (from pointing down to pointing up, by way of the right), the image
+turns through $-180^\circ$ at infinite radius: half a clockwise circle. A double
+pole on the axis gives a full clockwise circle, $-360^\circ$ --- enough, by itself,
+to wrap around $-1$.
+
+\begin{example}[a pair of poles on the imaginary axis]\label{ex:nyq4}
+$L(s)=\dfrac{1}{s^{2}+4}=\dfrac{1}{(s-2j)(s+2j)}$. Both poles lie on the axis and are
+detoured, so $P=0$. Away from them, $L(j\omega)=1/(4-\omega^{2})$ is real: it runs
+along the positive real axis from $\tfrac14$ out to $+\infty$ as $|\omega|\to2$, and
+along the negative real axis from $-\infty$ back to $0$ for $|\omega|>2$. Each detour
+contributes a clockwise half-circle at infinity --- the one at $+2j$ through the
+lower half-plane, the one at $-2j$ through the upper --- and together they close the
+plot into an infinitely large circle. The whole negative real axis is covered, so
+the plot passes \emph{through} $-1$, at $4-\omega^{2}=-1$, i.e.\ $\omega=\sqrt5$. By
+the criterion the closed loop has a pole on the imaginary axis, and indeed
+$1+L=0$ means $s^{2}+5=0$, $s=\pm j\sqrt5$: a sustained oscillation at
+$\sqrt5$\,rad/s, neither decaying nor growing.
+\end{example}
+
+\begin{example}[an unstable open loop]\label{ex:nyq3}
+$L(s)=\dfrac{K}{s-1}$ with $K>0$. Now the open loop has a pole at $s=1$, so $P=1$.
+On the imaginary axis
+\[
+   L(j\omega) = \frac{K}{j\omega-1}
+   = -\frac{K}{1+\omega^{2}} - j\,\frac{K\omega}{1+\omega^{2}},
+\]
+which traces the circle of radius $K/2$ centred at $-K/2$: from the origin
+($\omega=-\infty$) through $-\tfrac K2+j\tfrac K2$, then $-K$ ($\omega=0$), then
+$-\tfrac K2-j\tfrac K2$, and back to the origin --- counterclockwise
+(Figure~\ref{fig:nyqex}, right). If $K>1$ the circle contains $-1$ and goes round it
+once counterclockwise: $N=-1$, so $Z=N+P=0$ and the loop is stable. If $K<1$ it
+misses $-1$: $N=0$, $Z=1$, unstable. Directly, $D_L+N_L=s-1+K$, stable exactly when
+$K>1$. An unstable plant \emph{needs} an encirclement to be stabilised; ``the plot
+must not encircle $-1$'' is the rule only for stable open loops.
+\end{example}
+
+\begin{remark}[reading the criterion off a Bode plot]\label{rem:bodenyq}
+When $L$ is stable ($P=0$) and its phase falls through $-180^\circ$ just once, at a
+frequency $\omega_{pc}$, the Nyquist plot for $\omega>0$ crosses the negative real
+axis just once, at the point $-|L(j\omega_{pc})|$. It encircles $-1$ exactly when
+that point lies to the left of $-1$. So the criterion becomes a statement one can
+check on the Bode plot:
+\[
+   \text{closed loop stable}
+   \quad\Longleftrightarrow\quad
+   |L(j\omega_{pc})| < 1
+   \quad\text{where } \angle L(j\omega_{pc}) = -180^\circ .
+\]
+By the time the phase has turned the loop signal fully upside down, the gain must
+already be below one. In Example~\ref{ex:nyq1} the phase reaches $-180^\circ$ at
+$\omega_{pc}=\sqrt{11}$, where $|L|=K/60$ --- the same condition $K<60$ again. If
+the gain is too high there, it can be reduced (the idea behind a lag compensator),
+or the phase can be pushed back up so that $-180^\circ$ is reached later (a lead
+compensator).
+\end{remark}
+
+\begin{figure}[htb]
+\centering
+\begin{tikzpicture}[>=Stealth,
+   declare function={Lm(\w)=20/sqrt(\w*\w+1)/sqrt(\w*\w+4)/sqrt(\w*\w+9);
+                     La(\w)=-(atan(\w)+atan(\w/2)+atan(\w/3));}]
+  % ---------------- Example: K/((s+1)(s+2)(s+3)), K=20 ----------------
+  \begin{scope}[scale=0.8]
+    \draw[->] (-1.7,0) -- (4.2,0) node[right,lbl] {$\operatorname{Re}L$};
+    \draw[->] (0,-2.8) -- (0,2.8) node[above,lbl] {$\operatorname{Im}L$};
+    \draw[thick] plot[domain=-2:1.6,samples=120,smooth]
+      ({Lm(pow(10,\x))*cos(La(pow(10,\x)))},{Lm(pow(10,\x))*sin(La(pow(10,\x)))});
+    \draw[dashed] plot[domain=-2:1.6,samples=120,smooth]
+      ({Lm(pow(10,\x))*cos(La(pow(10,\x)))},{-Lm(pow(10,\x))*sin(La(pow(10,\x)))});
+    \draw[->,thick] ({Lm(0.30)*cos(La(0.30))},{Lm(0.30)*sin(La(0.30))})
+                 -- ({Lm(0.34)*cos(La(0.34))},{Lm(0.34)*sin(La(0.34))});
+    \fill (-1,0) circle (2.2pt);
+    \node[lbl,above left] at (-1,0.05) {$-1$};
+    \draw (-0.333,0.1) -- (-0.333,-0.1);
+    \node[lbl,below left] at (-0.30,-0.08) {$-\tfrac13$};
+    \node[lbl,above right] at (3.333,0) {$\tfrac{10}{3}$};
+    \node[lbl,right] at (0.12,-2.05) {$\omega=1$};
+    \node[lbl] at (3.35,-1.45) {$\omega>0$};
+    \node[lbl] at (3.35,1.45) {$\omega<0$};
+  \end{scope}
+  % ---------------- Example: K/(s-1), K=1.5 ----------------
+  \begin{scope}[xshift=8.6cm,scale=1.45]
+    \draw[->] (-2.0,0) -- (0.7,0) node[right,lbl] {$\operatorname{Re}L$};
+    \draw[->] (0,-1.1) -- (0,1.15) node[above,lbl] {$\operatorname{Im}L$};
+    \draw[thick] (-0.75,0) circle (0.75);
+    \draw[->,thick] (-0.75,0.75) arc (90:110:0.75);
+    \draw[->,thick] (-0.75,-0.75) arc (270:290:0.75);
+    \fill (-1,0) circle (1.5pt);
+    \node[lbl,above] at (-1.02,0.04) {$-1$};
+    \node[lbl,below left] at (-1.5,0) {$-K$};
+    \node[lbl,left] at (-1.52,0.18) {$\omega=0$};
+    \node[lbl,above right] at (0,0) {$\omega\to\pm\infty$};
+  \end{scope}
+\end{tikzpicture}
+\caption{Left: the Nyquist plot of Example~\ref{ex:nyq1} for $K=20$ (solid $\omega>0$,
+dashed $\omega<0$). It crosses the negative real axis at $-K/60=-\tfrac13$, to the
+right of $-1$, so $-1$ is not encircled and the closed loop is stable. Right:
+Example~\ref{ex:nyq3} for $K=1.5$. The open loop is unstable ($P=1$), and the plot
+goes once counterclockwise around $-1$ ($N=-1$), which is exactly what makes the
+closed loop stable.}
+\label{fig:nyqex}
+\end{figure}
+
+%% ==== Part V ===============================================================
+\partdivider{Part V --- Linear Algebra for State Space}
+
+\lecturebreak{Lectures 7--10}{23 September -- 7 October 2026}
+
+\section{Vector Spaces, Rank, and Linear Equations}\label{sec:vspace}
+
+A state is a point in $\R^{n}$, an input pushes it along certain directions, and an
+output reports certain combinations of its coordinates. Everything the rest of the
+course does with $\dot x=Ax+Bu$ is therefore a statement about vectors, subspaces
+and matrices. This Part collects the linear algebra that will be used, in the
+order in which it is needed.
+
+\subsection{Matrices, read by columns}
+A matrix $A\in\R^{m\times n}$ has $m$ rows and $n$ columns; it is \emph{square} if
+$m=n$, \emph{tall} if $m>n$ and \emph{fat} if $m<n$. Its transpose $A\tp\in\R^{n\times m}$
+satisfies $(ABC)\tp=C\tp B\tp A\tp$, and for complex matrices the
+\emph{Hermitian} (conjugate) transpose is $A^{H}=\overline{A}\tp$. The product
+$C=AB$ of $A\in\R^{m\times n}$ and $B\in\R^{n\times k}$ has entries
+$c_{ij}=\sum_{l}a_{il}b_{lj}$, but three other ways of reading it are far more
+useful. Write $a_1,\dots,a_n$ for the columns of $A$ and $b_1\tp,\dots,b_n\tp$ for
+the rows of $B$.
+\begin{enumerate}[label=(\roman*),itemsep=2pt]
+\item $Ax = x_1a_1+\dots+x_na_n$: a matrix times a vector is a
+\emph{linear combination of the columns}.
+\item $y\tp B = y_1b_1\tp+\dots+y_nb_n\tp$: a row vector times a matrix is a linear
+combination of the rows.
+\item $AB = \sum_{i=1}^{n} a_i\,b_i\tp$: a product is a \emph{sum of outer products},
+each $a_ib_i\tp$ a matrix of rank one.
+\end{enumerate}
+Reading (i) is the one to keep in mind throughout: asking whether $Ax=b$ can be
+solved is asking whether $b$ is a combination of the columns of $A$.
+
+\subsection{Vector spaces, span, basis, dimension}
+\begin{definition}[vector space]
+A set $S$ of vectors is a \emph{vector space} (a \emph{subspace} of $\R^{n}$) if
+it is closed under addition and scalar multiplication: $x,y\in S$ and
+$a,b\in\R$ imply $ax+by\in S$.
+\end{definition}
+Taking $a=b=0$ shows that every vector space contains the origin. A line or a plane
+\emph{through the origin} is a subspace; one that misses the origin is not.
+
+A \emph{linear combination} of $a_1,\dots,a_k$ is $\sum_i c_ia_i$, and the vectors
+are \emph{linearly independent} if $\sum_ic_ia_i=0$ forces every $c_i=0$ --- no one
+of them can be built from the others; they all point in genuinely different
+directions. The set of all linear combinations is the \emph{span},
+\[
+   \operatorname{span}\{a_1,\dots,a_k\} = \Bigl\{\,\sum_{i=1}^{k}c_ia_i \;:\; c_i\in\R\Bigr\},
+\]
+and it is a vector space: adding two combinations, or scaling one, gives another
+combination. A \emph{basis} of a vector space is a set of linearly independent
+vectors that spans it. A basis is not unique, but the number of vectors in every
+basis is the same; that number is the \emph{dimension}. In the plane $x_3=0$ of
+$\R^{3}$, a single vector cannot span the plane, while any two non-parallel vectors
+in it form a basis, so the plane has dimension $2$. A basis whose vectors are
+mutually perpendicular and of unit length is \emph{orthonormal}.
+
+There are two ways to describe a subspace, and both will be used.
+\begin{itemize}[leftmargin=*,itemsep=2pt]
+\item \textbf{By building it up} as a span. The plane $x_3=0$ is
+$\operatorname{span}\{e_1,e_2\}$; each independent generator adds one to the
+dimension ($0\to2$).
+\item \textbf{By cutting it down} with equations. The same plane is
+$\{x\in\R^{3}:[0\;0\;1]\,x=0\}$; each independent constraint removes one dimension
+($3\to2$).
+\end{itemize}
+The line through the origin at $45^\circ$ in the $x_2x_3$-plane is
+$\operatorname{span}\{(0,1,1)\}$, or equally
+$\{x\in\R^{3}: [1\;0\;0]\,x=0,\ [0\;1\;-1]\,x=0\}$: two independent constraints
+leave $3-2=1$ dimension.
+
+\subsection{Range, null space, and the equation \texorpdfstring{$Ax=b$}{Ax=b}}
+\label{sec:rangenull}
+Two subspaces belong to every matrix $A\in\R^{m\times n}$, one of each kind:
+\begin{equation}\label{eq:rangenull}
+   \mathcal R(A) = \{Ax : x\in\R^{n}\}\subseteq\R^{m},
+   \qquad
+   \mathcal N(A) = \{x\in\R^{n} : Ax=0\}\subseteq\R^{n}.
+\end{equation}
+By reading (i), the \emph{range} $\mathcal R(A)$ is the span of the columns --- it
+is also called the \emph{column space}, a description by building up. The
+\emph{null space} $\mathcal N(A)$ is a description by cutting down. The
+\emph{rank} of $A$ is the number of linearly independent columns, which is always
+equal to the number of linearly independent rows, and it is the dimension of
+$\mathcal R(A)$.
+
+The two subspaces answer the two questions one asks about a linear equation
+$Ax=b$:
+\begin{itemize}[leftmargin=*,itemsep=2pt]
+\item \textbf{Existence.} A solution exists if and only if $b\in\mathcal R(A)$ ---
+if and only if $b$ is a combination of the columns.
+\item \textbf{Uniqueness.} If $Ax=b$ and $Ax^{*}=b$, then $A(x-x^{*})=0$, so the
+two solutions differ by an element of $\mathcal N(A)$. A solution is unique if
+and only if $\mathcal N(A)=\{0\}$, which by reading (i) says that
+$x_1a_1+\dots+x_na_n=0$ only for $x=0$: the columns are linearly independent.
+\end{itemize}
+A matrix whose columns are independent, $\rank A=n$, is said to have \emph{full
+column rank}, and then $\mathcal N(A)=\{0\}$. Existence and uniqueness are
+different questions with different answers, and it pays to keep them apart.
+
+\begin{remark}[counting dimensions]
+The cutting-down count above is a general fact. For $A\in\R^{m\times n}$,
+\[
+   \dim\mathcal R(A)+\dim\mathcal N(A) = n ,
+\]
+the \emph{rank--nullity} relation: of the $n$ input directions, $\rank A$ of them
+reach independent outputs and the remaining $n-\rank A$ are sent to zero.
+\end{remark}
+
+\begin{example}[the equilibria of the two carts]\label{ex:cartnull}
+For the two-cart matrix $A$ of \eqref{eq:ABCD}, the states that stay put when no
+force is applied are the solutions of $Ax=0$. Rows $1$ and $3$ give $x_2=x_4=0$:
+both carts at rest. Row $2$ then reads $\frac{k}{m_1}(x_3-x_1)=0$, so $x_1=x_3$, and
+row $4$ says the same. Hence
+\[
+   \mathcal N(A) = \operatorname{span}\{(1,0,1,0)\tp\},
+   \qquad \rank A = 3 .
+\]
+Any position with both carts equally far along and the spring unstretched is an
+equilibrium --- there is no ground spring to pull them back. In particular the
+target of Question~\ref{q:goal}, both carts $1$\,m ahead and at rest,
+$x=(1,0,1,0)\tp$, is an equilibrium of the uncontrolled system: once there, the
+carts stay there with $u=0$. Keeping the damper $b$ changes nothing, since every
+$b$-term is multiplied by a velocity.
+\end{example}
+
+\subsection{Inverse and determinant}
+A square matrix $A\in\R^{n\times n}$ is \emph{invertible} if there is $A^{-1}$ with
+$AA^{-1}=A^{-1}A=I$. Writing $A^{-1}=[x_1\;\cdots\;x_n]$, the equation $AA^{-1}=I$ is
+the $n$ equations $Ax_i=e_i$, so an inverse exists exactly when every $e_i$, and
+hence all of $\R^{n}$, lies in $\mathcal R(A)$; for a square matrix that happens
+exactly when $\mathcal N(A)=\{0\}$. The following are therefore equivalent:
+$A$ is invertible; $\mathcal R(A)=\R^{n}$; $\mathcal N(A)=\{0\}$; the columns are
+independent; $\rank A=n$; $\det A\neq0$; $0$ is not an eigenvalue of $A$.
+
+For a $2\times2$ matrix,
+\[
+   \begin{bmatrix}a&b\\c&d\end{bmatrix}^{-1}
+   = \frac{1}{ad-bc}\begin{bmatrix}d&-b\\-c&a\end{bmatrix}
+   = \frac{\operatorname{adj}A}{\det A},
+\]
+and the formula $A^{-1}=\operatorname{adj}A/\det A$ holds in every dimension; it is
+the formula behind $(sI-A)^{-1}=\operatorname{adj}(sI-A)/\det(sI-A)$ of
+\S\ref{sec:ss2tf}. The determinant satisfies $\det A\tp=\det A$ and
+$\det(ABC)=\det A\,\det B\,\det C$.
+
+\begin{proposition}[Schur complement]\label{prop:schur}
+Let $M=\begin{bmatrix}A&B\\C&D\end{bmatrix}$ with $A$ and $D$ square. If $A$ is
+invertible,
+\[
+   \det M = \det A\,\det\bigl(D-CA^{-1}B\bigr);
+\]
+if $D$ is invertible, $\det M=\det D\,\det\bigl(A-BD^{-1}C\bigr)$.
+\end{proposition}
+\begin{proof}
+Block elimination: $\begin{bmatrix}A&B\\C&D\end{bmatrix}
+=\begin{bmatrix}I&0\\CA^{-1}&I\end{bmatrix}
+\begin{bmatrix}A&B\\0&D-CA^{-1}B\end{bmatrix}$. The first factor has determinant
+$1$ and the second is block triangular. The other case is symmetric.
+\end{proof}
+The matrix $D-CA^{-1}B$ is the \emph{Schur complement} of $A$ in $M$ --- what is
+left of $D$ after the block $A$ has been eliminated, exactly as in Gaussian
+elimination on scalars.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Coordinates, Eigenvalues, and Diagonalization}\label{sec:eigen}
+
+\subsection{Changing state coordinates}\label{sec:similarity}
+The state vector of a system is a choice. Positions and velocities of each cart
+are one choice; the position of the pair and the stretch of the spring would be
+another. Any invertible $T\in\R^{n\times n}$ defines new coordinates
+\[
+   z(t) = T\,x(t) .
+\]
+Substituting $x=T^{-1}z$ into \eqref{eq:std},
+\begin{equation}\label{eq:simtransform}
+   \dot z = TAT^{-1}\,z + TB\,u, \qquad y = CT^{-1}\,z + D\,u .
+\end{equation}
+The quadruple $(A,B,C,D)$ becomes $(TAT^{-1},TB,CT^{-1},D)$, a
+\emph{similarity transformation}. The physics has not changed, so neither should
+anything one can measure --- and indeed the transfer function is unchanged:
+\[
+   CT^{-1}\bigl(sI-TAT^{-1}\bigr)^{-1}TB + D
+   = CT^{-1}\bigl(T(sI-A)T^{-1}\bigr)^{-1}TB + D
+   = C(sI-A)^{-1}B + D ,
+\]
+using $sI=T(sI)T^{-1}$. This is one reason the realization of
+\S\ref{sec:ss2tf} is far from unique: every invertible $T$ turns one realization
+into another with the same transfer function.
+
+\subsection{Eigenvalues and eigenvectors}
+\begin{definition}[eigenvalue, eigenvector]
+A number $\lambda$ is an \emph{eigenvalue} of $A\in\R^{n\times n}$, with
+\emph{eigenvector} $v\neq0$, if $Av=\lambda v$.
+\end{definition}
+An eigenvector is a direction that $A$ does not turn, only stretches by the factor
+$\lambda$. Rewriting $Av=\lambda v$ as $(\lambda I-A)v=0$ shows that $\lambda$ is an
+eigenvalue exactly when $\mathcal N(\lambda I-A)\neq\{0\}$, i.e.\ when $\lambda I-A$
+is not invertible:
+\begin{equation}\label{eq:charpoly}
+   \det(\lambda I-A) = \lambda^{n}+a_{n-1}\lambda^{n-1}+\dots+a_1\lambda+a_0 = 0 .
+\end{equation}
+The left side is the \emph{characteristic polynomial}, of degree $n$, so $A$ has
+$n$ eigenvalues counted with multiplicity --- complex ones in conjugate pairs,
+since the coefficients are real. Every nonzero vector in
+$\mathcal N(\lambda I-A)$ is an eigenvector, and that subspace is the
+\emph{eigenspace} of $\lambda$.
+
+Eigenvalues do not depend on the coordinates: by \eqref{eq:simtransform},
+\[
+   \det\bigl(\lambda I-TAT^{-1}\bigr) = \det\bigl(T(\lambda I-A)T^{-1}\bigr)
+   = \det T\,\det(\lambda I-A)\,\det T^{-1} = \det(\lambda I-A),
+\]
+so the whole characteristic polynomial is invariant. And the denominator of
+$P(s)=C\operatorname{adj}(sI-A)B/\det(sI-A)+D$ is exactly $\det(sI-A)$: \emph{the
+eigenvalues of $A$ are the poles of the transfer function}, except where a factor
+cancels against the numerator. The two descriptions of Figure~\ref{fig:routes}
+meet here.
+
+\subsection{Diagonalization}\label{sec:diag}
+Suppose $A$ has $n$ linearly independent eigenvectors $v_1,\dots,v_n$ with
+eigenvalues $\lambda_1,\dots,\lambda_n$. Stacking the $n$ equations
+$Av_i=\lambda_iv_i$ side by side,
+\[
+   A\,[v_1\;\cdots\;v_n] = [\lambda_1v_1\;\cdots\;\lambda_nv_n]
+   = [v_1\;\cdots\;v_n]
+     \begin{bmatrix}\lambda_1&&\\&\ddots&\\&&\lambda_n\end{bmatrix},
+\]
+that is
+\begin{equation}\label{eq:diagonalize}
+   AV = V\Lambda,\qquad V^{-1}AV=\Lambda,\qquad A = V\Lambda V^{-1}.
+\end{equation}
+$V$ is invertible precisely because its columns are independent. In the language of
+\S\ref{sec:similarity}, the coordinates $z=V^{-1}x$ make the state matrix diagonal.
+
+When are there $n$ independent eigenvectors? Two counts decide it. The
+\emph{algebraic multiplicity} of an eigenvalue is how many times it is a root of
+\eqref{eq:charpoly}; its \emph{geometric multiplicity} is
+$\dim\mathcal N(\lambda I-A)$, the number of independent eigenvectors it has.
+Always $1\le$ geometric $\le$ algebraic.
+\begin{itemize}[leftmargin=*,itemsep=2pt]
+\item Eigenvectors belonging to \emph{distinct} eigenvalues are linearly
+independent. So if all $n$ eigenvalues are distinct, $A$ is diagonalizable.
+\item In general, $A$ is diagonalizable if and only if the geometric multiplicity
+equals the algebraic multiplicity for every eigenvalue.
+\end{itemize}
+
+\begin{example}[equal multiplicities, and not]
+Both
+\[
+   A=\begin{bmatrix}1&0&0&0\\0&2&0&0\\0&0&2&0\\0&0&0&3\end{bmatrix}
+   \quad\text{and}\quad
+   B=\begin{bmatrix}1&0&0&0\\0&2&1&0\\0&0&2&0\\0&0&0&3\end{bmatrix}
+\]
+have eigenvalues $1,2,2,3$; the eigenvalue $2$ has algebraic multiplicity $2$ in
+each. For $A$, $\mathcal N(2I-A)=\operatorname{span}\{e_2,e_3\}$ has dimension $2$:
+two independent eigenvectors, and $A$ is (already) diagonal. For $B$,
+\[
+   2I-B=\begin{bmatrix}1&0&0&0\\0&0&-1&0\\0&0&0&0\\0&0&0&-1\end{bmatrix},
+   \qquad \mathcal N(2I-B)=\operatorname{span}\{e_2\},
+\]
+of dimension $1$: the two copies of the eigenvalue share a single eigenvector
+direction, $V$ cannot be made invertible, and $B$ is not diagonalizable. The single
+off-diagonal $1$ is what makes the difference.
+\end{example}
+
+\begin{example}[the two carts, decoupled]\label{ex:cartdecouple}
+Take equal masses $m_1=m_2=m$ (and $b=0$, as in \eqref{eq:ABCD}). Adding and
+subtracting the two equations of motion \eqref{eq:eom},
+\[
+   m(\ddot p_1+\ddot p_2) = u - c(\dot p_1+\dot p_2),\qquad
+   m(\ddot p_1-\ddot p_2) = u - 2k(p_1-p_2) - c(\dot p_1-\dot p_2).
+\]
+So the coordinates $z=(p_1+p_2,\;\dot p_1+\dot p_2,\;p_1-p_2,\;\dot p_1-\dot p_2)$,
+i.e.\ $z=Tx$ with
+\[
+   T=\begin{bmatrix}1&0&1&0\\0&1&0&1\\1&0&-1&0\\0&1&0&-1\end{bmatrix},
+   \qquad
+   TAT^{-1}=\begin{bmatrix}0&1&0&0\\0&-\frac cm&0&0\\0&0&0&1\\0&0&-\frac{2k}m&-\frac cm\end{bmatrix},
+   \qquad TB=\frac1m\begin{bmatrix}0\\1\\0\\1\end{bmatrix},
+\]
+split the system into two independent pieces: the motion of the pair as a whole,
+which feels only friction, and the oscillation of the carts against each other,
+which feels friction and twice the spring. The eigenvalues can now be read off
+block by block: $0$ and $-c/m$ from the first, and the roots of
+$\lambda^{2}+\frac cm\lambda+\frac{2k}{m}$ from the second. For the parameters used
+in the first problem set ($m=1$, $k=4$, $c=0.4$) they are $0$, $-0.4$ and
+$-0.2\pm2.8213j$. The eigenvalue $0$ belongs to the eigenvector $(1,0,1,0)\tp$ of
+Example~\ref{ex:cartnull}: the free drift of the pair, which nothing in the
+open loop holds back.
+\end{example}
+
+\subsection{Symmetric matrices}\label{sec:symmetric}
+Symmetric matrices, $A=A\tp$, are the best behaved of all, and they will return in
+\S\ref{sec:svd}.
+\begin{theorem}[spectral theorem]\label{thm:spectral}
+Let $A=A\tp\in\R^{n\times n}$. Then every eigenvalue of $A$ is real, eigenvectors
+belonging to distinct eigenvalues are orthogonal, and one can choose $n$
+orthonormal eigenvectors. With them as the columns of $V$,
+\[
+   V\tp V=I,\qquad V^{-1}=V\tp,\qquad
+   A = V\Lambda V\tp = \sum_{i=1}^{n}\lambda_i\,v_iv_i\tp .
+\]
+\end{theorem}
+\begin{proof}[Orthogonality]
+If $Av_i=\lambda_iv_i$ and $Av_j=\lambda_jv_j$, then
+$\lambda_i\,v_j\tp v_i = v_j\tp Av_i = v_j\tp A\tp v_i = (Av_j)\tp v_i
+= \lambda_j\,v_j\tp v_i$, so $(\lambda_i-\lambda_j)\,v_j\tp v_i=0$, and
+$v_j\tp v_i=0$ when $\lambda_i\neq\lambda_j$.
+\end{proof}
+Within an eigenspace of dimension $k$ one can always pick $k$ orthonormal vectors,
+and eigenspaces of different eigenvalues are orthogonal to one another, so all the
+choices together give an orthonormal set. For a symmetric matrix the inverse of
+$V$ costs nothing --- it is the transpose --- and $V\tp AV=\Lambda$ is much easier
+to compute than $V^{-1}AV$. The last form, $A=\sum\lambda_iv_iv_i\tp$, writes $A$ as a
+sum of rank-one pieces, one along each eigen-direction.
+
+\subsection{The Jordan form}\label{sec:jordan}
+A matrix with too few eigenvectors, such as $B$ above, cannot be diagonalized, but
+every square matrix can be brought to the next best thing.
+\begin{theorem}[Jordan form]
+Every $A\in\R^{n\times n}$ satisfies $AV=VJ$ for some invertible (possibly complex)
+$V$, where $J$ is block diagonal with \emph{Jordan blocks}
+\[
+   J_k(\lambda)=\begin{bmatrix}\lambda&1&&\\&\lambda&\ddots&\\&&\ddots&1\\&&&\lambda\end{bmatrix}
+\]
+on the diagonal. $A$ is diagonalizable exactly when every block is $1\times1$.
+\end{theorem}
+To see what the columns of $V$ are, take a $3\times3$ example,
+\[
+   AV=VJ,\qquad J=\begin{bmatrix}\lambda_1&0&0\\0&\lambda_2&1\\0&0&\lambda_2\end{bmatrix},
+   \qquad
+   [Av_1\;Av_2\;Av_3]=[\lambda_1v_1\;\;\lambda_2v_2\;\;\lambda_2v_3+v_2].
+\]
+The first two columns are ordinary eigenvectors. The third satisfies
+\[
+   (A-\lambda_2I)\,v_3 = v_2 ,
+\]
+so it is not an eigenvector --- $A-\lambda_2I$ does not annihilate it, but sends it
+onto the eigenvector $v_2$. Such a $v_3$ is a \emph{generalized eigenvector}. A
+generalized eigenvector exists exactly when some eigenvalue has algebraic
+multiplicity greater than its geometric multiplicity; it supplies the direction
+that the missing eigenvector would have provided.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{The Matrix Exponential and the State Response}\label{sec:expm}
+
+\subsection{Solving \texorpdfstring{$\dot x=Ax$}{xdot = Ax}}
+For a scalar, $\dot x=ax$ has the solution $x(t)=e^{at}x_0$. The same is true for
+a system, once the exponential of a matrix is defined by the same series.
+\begin{definition}[matrix exponential]
+For $A\in\R^{n\times n}$,
+\[
+   e^{At} = I + At + \frac{(At)^{2}}{2!} + \frac{(At)^{3}}{3!} + \cdots .
+\]
+\end{definition}
+The series converges for every $A$ and $t$. Differentiating term by term,
+\[
+   \frac{\d}{\d t}e^{At} = A + A^{2}t + \frac{A^{3}t^{2}}{2!}+\cdots
+   = A\Bigl(I+At+\frac{(At)^{2}}{2!}+\cdots\Bigr) = Ae^{At},
+\]
+so $x(t)=e^{At}x_0$ satisfies $\dot x=Ax$ and $x(0)=x_0$: it is \emph{the}
+solution. The properties follow the scalar ones, with one exception:
+\begin{equation}\label{eq:expmprops}
+   e^{A\cdot0}=I,\qquad e^{At_1}e^{At_2}=e^{A(t_1+t_2)},\qquad
+   \bigl(e^{At}\bigr)^{-1}=e^{-At},\qquad
+   e^{At}e^{Bt}\neq e^{(A+B)t}\ \text{unless } AB=BA .
+\end{equation}
+The third follows from the second with $t_2=-t_1$; in particular $e^{At}$ is always
+invertible. The last fails because the series multiply out with $AB$ and $BA$
+appearing in different orders. In MATLAB the matrix exponential is
+\verb|expm|, not \verb|exp| (which exponentiates entry by entry): the position of
+the second cart at $t=10$ from $x_0$ is \verb|[0 0 1 0]*expm(A*10)*x0|.
+
+\subsection{The state response}\label{sec:stateresponse}
+With an input, multiply $\dot x-Ax=Bu$ by $e^{-At}$. The left side becomes an exact
+derivative, $e^{-At}\dot x-e^{-At}Ax=\frac{\d}{\d t}\bigl(e^{-At}x(t)\bigr)$, and
+integrating from $0$ to $t$ gives $e^{-At}x(t)-x_0=\int_0^{t}e^{-A\tau}Bu(\tau)\,\d\tau$.
+Multiplying by $e^{At}$:
+\begin{equation}\label{eq:voc}
+   \boxed{\;x(t) = e^{At}x_0 + \int_{0}^{t} e^{A(t-\tau)}\,B\,u(\tau)\,\d\tau ,\qquad
+   y(t) = Ce^{At}x_0 + C\!\int_{0}^{t} e^{A(t-\tau)}Bu(\tau)\,\d\tau + Du(t).\;}
+\end{equation}
+This is the \emph{variation of constants} formula. Its first term is the
+\emph{zero-input response}, what the initial state does on its own; the second is
+the \emph{zero-state response}. The matrix $e^{A(t-t_0)}$ is the \emph{state
+transition matrix}: it carries the state at time $t_0$ to the state at time $t$
+when no input acts, $x(t)=e^{A(t-t_0)}x(t_0)$. The integral says the same about
+the input: the small push $Bu(\tau)\,\d\tau$ delivered at time $\tau$ is carried
+forward to time $t$ by $e^{A(t-\tau)}$, and all the pushes are added up.
+
+Taking Laplace transforms of $\dot x=Ax+Bu$ instead gives
+$X(s)=(sI-A)^{-1}x_0+(sI-A)^{-1}BU(s)$, which is \eqref{eq:voc} term by term
+--- a convolution in time is a product in $s$. Comparing the two,
+\begin{equation}\label{eq:laplaceexpm}
+   \Lap\{e^{At}\} = (sI-A)^{-1}.
+\end{equation}
+The zero-state part of the output, $C(sI-A)^{-1}BU+DU$, is the transfer function of
+\S\ref{sec:ss2tf} once more; the zero-input part is the free response that the
+transfer function leaves out.
+
+\subsection{Modes: solving by diagonalization}\label{sec:modes}
+If $A=V\Lambda V^{-1}$ is diagonalizable, change to the coordinates
+$z=V^{-1}x$ of \S\ref{sec:diag}. Then $\dot z=\Lambda z$ is $n$ separate scalar
+equations $\dot z_i=\lambda_iz_i$, so $z_i(t)=e^{\lambda_it}z_i(0)$, and going back,
+\begin{equation}\label{eq:modal}
+   x(t) = Vz(t) = z_1(0)\,e^{\lambda_1t}\,v_1 + \dots + z_n(0)\,e^{\lambda_nt}\,v_n .
+\end{equation}
+Each term is a \emph{mode}: a fixed direction $v_i$, scaled by a scalar exponential.
+The eigenvector decides the direction, the eigenvalue decides how fast that
+component grows or decays, and the initial condition decides how much of each mode
+is present (Figure~\ref{fig:modes}). The same formula, written without coordinates,
+uses the \emph{left eigenvectors} $w_i\tp$ --- the rows of $V^{-1}$, which satisfy
+$w_i\tp A=\lambda_iw_i\tp$ and $w_i\tp v_j=\delta_{ij}$:
+\begin{equation}\label{eq:expmdyad}
+   e^{At} = Ve^{\Lambda t}V^{-1} = \sum_{i=1}^{n} e^{\lambda_it}\,v_iw_i\tp ,
+   \qquad z_i(0) = w_i\tp x_0 .
+\end{equation}
+So $e^{At}$ is a sum of rank-one matrices, one per mode.
+
+\begin{keybox}
+\textbf{Stability of $\dot x=Ax$.} $x(t)\to0$ for every initial state if and only
+if every eigenvalue of $A$ has strictly negative real part.
+\end{keybox}
+For diagonalizable $A$ this is visible in \eqref{eq:modal}: a complex pair
+$\sigma\pm j\omega$ contributes $e^{\sigma t}$ times a rotation at frequency
+$\omega$, and every term dies out exactly when every $\operatorname{Re}\lambda_i<0$.
+\S\ref{sec:jordanresp} shows that the statement survives without
+diagonalizability. It is the state-space twin of the stable-plant condition of
+Definition~\ref{def:stable}, and since the eigenvalues of $A$ are the poles of $P$
+(barring cancellations), the two say the same thing.
+
+\begin{figure}[htb]
+\centering
+\begin{tikzpicture}[>=Stealth,scale=1.35]
+  \draw[->,gray] (-1.4,0) -- (2.6,0) node[right,lbl] {$x_1$};
+  \draw[->,gray] (0,-0.9) -- (0,2.8) node[above,lbl] {$x_2$};
+  \draw[dashed,gray] (-1.2,-0.48) -- (2.5,1.0);
+  \draw[dashed,gray] (0.30,-0.86) -- (-0.92,2.63);
+  \draw[->,very thick] (0,0) -- (1,0.4) node[below right,lbl] {$v_1$};
+  \draw[->,very thick] (0,0) -- (-0.35,1) node[left,lbl] {$v_2$};
+  \draw[->] (0,0) -- (2,0.8) node[right,lbl] {$z_1(0)v_1$};
+  \draw[->] (0,0) -- (-0.525,1.5) node[left,lbl] {$z_2(0)v_2$};
+  \draw[dotted] (2,0.8) -- (1.475,2.3) -- (-0.525,1.5);
+  \fill (1.475,2.3) circle (1.4pt) node[above right,lbl] {$x(0)$};
+  \draw[thick] plot[domain=0:9,samples=90,smooth,variable=\t]
+    ({2*exp(-0.5*\t)-0.525*exp(-2*\t)},{0.8*exp(-0.5*\t)+1.5*exp(-2*\t)});
+  \pgfmathsetmacro{\ax}{2*exp(-0.5*0.45)-0.525*exp(-2*0.45)}
+  \pgfmathsetmacro{\ay}{0.8*exp(-0.5*0.45)+1.5*exp(-2*0.45)}
+  \pgfmathsetmacro{\bx}{2*exp(-0.5*0.55)-0.525*exp(-2*0.55)}
+  \pgfmathsetmacro{\by}{0.8*exp(-0.5*0.55)+1.5*exp(-2*0.55)}
+  \draw[->,thick] (\ax,\ay) -- (\bx,\by);
+  \fill (0,0) circle (1.2pt);
+\end{tikzpicture}
+\caption{A modal decomposition, drawn for eigenvalues $\lambda_1=-0.5$ and
+$\lambda_2=-2$. The initial state splits along the eigenvectors (dotted
+parallelogram); each component then shrinks along its own eigenvector at its own
+rate. The fast mode $v_2$ dies first, so the trajectory bends and comes in to the
+origin along the slow direction $v_1$.}
+\label{fig:modes}
+\end{figure}
+
+\begin{example}[one matrix exponential, three ways]\label{ex:expm3}
+Let $A=\begin{bmatrix}0&1\\-2&-3\end{bmatrix}$, with
+$\det(\lambda I-A)=\lambda^{2}+3\lambda+2=(\lambda+1)(\lambda+2)$.
+
+\emph{By diagonalization.} Eigenvectors $v_1=(1,-1)\tp$ for $\lambda_1=-1$ and
+$v_2=(1,-2)\tp$ for $\lambda_2=-2$, so
+\[
+   V=\begin{bmatrix}1&1\\-1&-2\end{bmatrix},\quad
+   V^{-1}=\begin{bmatrix}2&1\\-1&-1\end{bmatrix},\quad
+   e^{At}=e^{-t}\begin{bmatrix}2&1\\-2&-1\end{bmatrix}
+         +e^{-2t}\begin{bmatrix}-1&-1\\2&2\end{bmatrix},
+\]
+the two rank-one pieces $v_1w_1\tp$ and $v_2w_2\tp$ of \eqref{eq:expmdyad}.
+
+\emph{By Laplace.} $(sI-A)^{-1}=\dfrac{1}{(s+1)(s+2)}\begin{bmatrix}s+3&1\\-2&s\end{bmatrix}$,
+and the partial fractions of \S\ref{sec:pfe} entry by entry, e.g.\
+$\frac{s+3}{(s+1)(s+2)}=\frac{2}{s+1}-\frac{1}{s+2}$, invert to the same matrix.
+
+\emph{By Cayley--Hamilton} (\S\ref{sec:cayley}). Write $e^{At}=\alpha_0(t)I+\alpha_1(t)A$
+and impose $e^{\lambda t}=\alpha_0+\alpha_1\lambda$ at both eigenvalues:
+$e^{-t}=\alpha_0-\alpha_1$, $e^{-2t}=\alpha_0-2\alpha_1$. Hence
+$\alpha_1=e^{-t}-e^{-2t}$, $\alpha_0=2e^{-t}-e^{-2t}$, and
+$\alpha_0I+\alpha_1A$ is once more the matrix above.
+\end{example}
+
+\subsection{When there are too few eigenvectors}\label{sec:jordanresp}
+For a matrix in Jordan form the decoupling is incomplete but still easy. With the
+$3\times3$ $J$ of \S\ref{sec:jordan}, $\dot z=Jz$ reads
+\[
+   \dot z_1=\lambda_1z_1,\qquad \dot z_2=\lambda_2z_2+z_3,\qquad \dot z_3=\lambda_2z_3 .
+\]
+The first and last are solved as before. The middle one is driven by $z_3$, and by
+\eqref{eq:voc} with $n=1$,
+\[
+   z_2(t) = e^{\lambda_2t}z_2(0)+\int_0^{t}e^{\lambda_2(t-\tau)}e^{\lambda_2\tau}z_3(0)\,\d\tau
+          = e^{\lambda_2t}z_2(0) + t\,e^{\lambda_2t}z_3(0).
+\]
+Hence
+\[
+   x(t) = z_1(0)e^{\lambda_1t}v_1 + \bigl(z_2(0)e^{\lambda_2t}+z_3(0)\,t\,e^{\lambda_2t}\bigr)v_2
+          + z_3(0)e^{\lambda_2t}v_3 ,
+\]
+and for a single block $J_2(\lambda)$, $e^{J_2t}=e^{\lambda t}\begin{bmatrix}1&t\\0&1\end{bmatrix}$.
+A Jordan block brings a factor $t$ in front of the exponential --- the same $t$
+that a repeated pole brought in \S\ref{sec:pfe}. Since $t^{k}e^{\lambda t}\to0$
+whenever $\operatorname{Re}\lambda<0$, the stability criterion above holds for
+every square matrix.
+
+\subsection{The Cayley--Hamilton theorem}\label{sec:cayley}
+\begin{theorem}[Cayley--Hamilton]
+Every square matrix satisfies its own characteristic equation: if
+$p(\lambda)=\det(\lambda I-A)=\lambda^{n}+a_{n-1}\lambda^{n-1}+\dots+a_0$, then
+\[
+   p(A) = A^{n}+a_{n-1}A^{n-1}+\dots+a_1A+a_0I = 0 .
+\]
+\end{theorem}
+\begin{proof}[Sketch]
+If $A=V\Lambda V^{-1}$, then $A^{k}=V\Lambda^{k}V^{-1}$, so
+\[
+   p(A)=V\,p(\Lambda)\,V^{-1},\qquad
+   p(\Lambda)=\diag\bigl(p(\lambda_1),\dots,p(\lambda_n)\bigr)=0,
+\]
+because each $\lambda_i$ is a root. For a general $A$ the same argument runs block by block on
+the Jordan form, where $p$ contains a factor $(\lambda-\lambda_i)^{k}$ large enough
+to annihilate each $k\times k$ block.
+\end{proof}
+The consequence is that $A^{n}$ is a combination of $I,A,\dots,A^{n-1}$, hence so is
+$A^{n+1}=A\cdot A^{n}$, and so on: \emph{every polynomial in $A$ reduces to one of
+degree at most $n-1$}, and so does every convergent power series --- in particular
+$e^{At}=\alpha_0(t)I+\alpha_1(t)A+\dots+\alpha_{n-1}(t)A^{n-1}$, as used in
+Example~\ref{ex:expm3}. When the eigenvalues are distinct, the coefficients come
+from the $n$ scalar equations $e^{\lambda_it}=\sum_k\alpha_k(t)\lambda_i^{k}$.
+
+\begin{example}[reducing a matrix polynomial]
+Let $A=\begin{bmatrix}2&1\\1&2\end{bmatrix}$, so $p(\lambda)=\lambda^{2}-4\lambda+3$ and
+$A^{2}=4A-3I$. Then $A^{3}=4A^{2}-3A=13A-12I$ and $A^{4}=13A^{2}-12A=40A-39I$, so
+\[
+   A^{4}+3A^{3}+A^{2}+I = 83A-77I .
+\]
+By the same token $A^{10000}=aA+bI$ for two numbers $a,b$; evaluating the scalar
+identity $\lambda^{10000}=a\lambda+b$ at the eigenvalues $1$ and $3$ gives
+$a=\frac{3^{10000}-1}{2}$, $b=\frac{3-3^{10000}}{2}$.
+\end{example}
+
+\begin{remark}[four ways to compute $e^{At}$]
+The series definition; the inverse Laplace transform of $(sI-A)^{-1}$
+\eqref{eq:laplaceexpm}; the modal sum $\sum_ie^{\lambda_it}v_iw_i\tp$ when $A$ is
+diagonalizable (with the Jordan form when it is not); and the Cayley--Hamilton
+polynomial of degree $n-1$. They are four views of one object, and
+Example~\ref{ex:expm3} checks three of them against each other.
+\end{remark}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Positive Definiteness and the Singular Value Decomposition}\label{sec:svd}
+
+\subsection{Quadratic forms and positive definite matrices}\label{sec:pd}
+A \emph{quadratic form} is $x\tp Px$ for a square $P$. Only the symmetric part of
+$P$ contributes, since $x\tp Px$ is a scalar and so equals its own transpose
+$x\tp P\tp x$:
+\[
+   x\tp Px = x\tp\Bigl(\tfrac{P+P\tp}{2}\Bigr)x .
+\]
+It is therefore no loss to take $P=P\tp$.
+\begin{definition}[positive definite]
+A symmetric $P$ is \emph{positive definite}, written $P\succ0$, if $x\tp Px>0$ for
+every $x\neq0$, and \emph{positive semidefinite}, $P\succeq0$, if $x\tp Px\ge0$
+for every $x$.
+\end{definition}
+Positive definite matrices are the matrices that measure size: energies, costs and
+squared distances are all quadratic forms of this kind.
+
+\begin{proposition}[two tests]\label{prop:pdtests}
+For $P=P\tp\in\R^{n\times n}$ the following are equivalent:
+\begin{enumerate}[label=(\alph*),itemsep=2pt]
+\item $P\succ0$;
+\item every eigenvalue of $P$ is positive;
+\item $P=L\tp L$ for some $L$ with full column rank.
+\end{enumerate}
+\end{proposition}
+\begin{proof}
+By Theorem~\ref{thm:spectral}, $P=V\Lambda V\tp$, so with $y=V\tp x$,
+$x\tp Px=y\tp\Lambda y=\sum_i\lambda_iy_i^{2}$. As $x$ ranges over the nonzero
+vectors so does $y$, and the sum is positive for all of them exactly when every
+$\lambda_i>0$: (a)$\Leftrightarrow$(b). If $P=L\tp L$, then $x\tp Px=\|Lx\|^{2}\ge0$,
+with equality only when $Lx=0$, i.e.\ only when $x=0$ if $\mathcal N(L)=\{0\}$:
+(c)$\Rightarrow$(a). Conversely, (b) lets one take $L=\Lambda^{1/2}V\tp$.
+\end{proof}
+Semidefiniteness is the same with ``positive'' replaced by ``nonnegative'' and
+the rank condition on $L$ dropped. Geometrically, for $P\succ0$ the level set
+$x\tp Px=1$ is an ellipsoid whose axes point along the eigenvectors of $P$, with
+semi-axis $1/\sqrt{\lambda_i}$ along $v_i$. For $P=\begin{bmatrix}2&1\\1&2\end{bmatrix}$
+the eigenvalues are $1$ and $3$, so $P\succ0$, and $2x_1^{2}+2x_1x_2+2x_2^{2}=1$ is
+an ellipse with its long axis along $(1,-1)$.
+
+\subsection{The four fundamental subspaces}\label{sec:foursub}
+Every $A\in\R^{m\times n}$ of rank $r$ carries four subspaces, two in each of the
+spaces it connects:
+\begin{center}\small
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{}llll@{}}
+\toprule
+subspace & lives in & dimension & description\\
+\midrule
+$\mathcal R(A\tp)$ & $\R^{n}$ & $r$   & row space\\
+$\mathcal N(A)$    & $\R^{n}$ & $n-r$ & null space\\
+$\mathcal R(A)$    & $\R^{m}$ & $r$   & column space\\
+$\mathcal N(A\tp)$ & $\R^{m}$ & $m-r$ & left null space\\
+\bottomrule
+\end{tabular}
+\end{center}
+The pairs are not merely of complementary dimension; they are perpendicular. If
+$Ax=0$ and $y=A\tp z$, then $y\tp x=z\tp Ax=0$, so
+\[
+   \mathcal N(A)\perp\mathcal R(A\tp),\qquad\text{and likewise}\qquad
+   \mathcal N(A\tp)\perp\mathcal R(A).
+\]
+Every $x\in\R^{n}$ thus splits uniquely as $x=x_r+x_n$ with $x_r$ in the row space
+and $x_n$ in the null space, and $Ax=Ax_r$: the null-space part is lost, and $A$
+maps the row space one-to-one onto the column space (Figure~\ref{fig:foursub}).
+
+\begin{figure}[htb]
+\centering
+\begin{tikzpicture}[>=Stealth,scale=1.15]
+  % ---- R^n ----
+  \node[lbl] at (-1.7,1.9) {$\R^{n}$};
+  \draw[thick] ($(0,0)+(215:1.3)$) -- ($(0,0)+(35:2.0)$);
+  \draw[thick] ($(0,0)+(125:1.5)$) -- ($(0,0)+(305:1.4)$);
+  \draw ($(35:0.18)$) -- ($(35:0.18)+(125:0.18)$) -- ($(125:0.18)$);
+  \node[lbl,anchor=south west] at (35:2.0) {$\mathcal R(A\tp)$, dim $r$};
+  \node[lbl,anchor=south east] at (125:1.5) {$\mathcal N(A)$, dim $n-r$};
+  \fill (0,0) circle (1.2pt);
+  \fill (35:1.35) circle (1.4pt) node[above left,lbl] {$x_r$};
+  \fill (305:1.0) circle (1.4pt) node[left,lbl] {$x_n$};
+  % ---- R^m ----
+  \begin{scope}[shift={(6.2,0)}]
+    \node[lbl] at (2.1,1.9) {$\R^{m}$};
+    \draw[thick] ($(215:1.4)$) -- ($(35:2.0)$);
+    \draw[thick] ($(125:1.3)$) -- ($(305:1.4)$);
+    \draw ($(35:0.18)$) -- ($(35:0.18)+(125:0.18)$) -- ($(125:0.18)$);
+    \node[lbl,anchor=south west] at (35:2.0) {$\mathcal R(A)$, dim $r$};
+    \node[lbl,anchor=north west] at (305:1.4) {$\mathcal N(A\tp)$, dim $m-r$};
+    \fill (0,0) circle (1.2pt) node[below left,lbl] {$0$};
+    \fill (35:1.55) circle (1.4pt) node[above left,lbl] {$Ax_r$};
+  \end{scope}
+  \draw[->] ($(35:1.35)+(0.08,0.02)$) to[bend left=12]
+        node[above,lbl] {$A$} ($(6.2,0)+(35:1.55)+(-0.08,0)$);
+  \draw[->] ($(305:1.0)+(0.08,-0.02)$) to[bend right=14]
+        node[below,lbl] {$A$} ($(6.2,0)+(-0.06,-0.04)$);
+\end{tikzpicture}
+\caption{The four fundamental subspaces of $A\in\R^{m\times n}$, each drawn as a
+line. In $\R^{n}$ the row space and the null space are perpendicular, and so are the
+column space and the left null space in $\R^{m}$. $A$ carries the row-space part
+$x_r$ of a vector one-to-one onto the column space and sends the null-space part
+$x_n$ to zero.}
+\label{fig:foursub}
+\end{figure}
+
+One more fact links $A$ to the symmetric matrix $A\tp A$:
+\begin{equation}\label{eq:nullata}
+   \mathcal N(A\tp A) = \mathcal N(A),\qquad\text{hence}\qquad \rank(A\tp A)=\rank A .
+\end{equation}
+Clearly $Ax=0$ implies $A\tp Ax=0$. Conversely, if $A\tp Ax=0$ then
+$0=x\tp A\tp Ax=\|Ax\|^{2}$, so $Ax=0$. In particular $A\tp A$ is invertible
+exactly when $A$ has full column rank --- and then $A\tp A\succ0$, by
+Proposition~\ref{prop:pdtests}(c) with $L=A$. In every case $A\tp A\succeq0$.
+
+\subsection{The singular value decomposition}\label{sec:svdthm}
+Eigenvectors only make sense for square matrices, and even then they need not be
+orthogonal or even numerous enough. The singular value decomposition repairs all of
+this at once, for every matrix.
+\begin{theorem}[SVD]\label{thm:svd}
+Every $A\in\R^{m\times n}$ of rank $r$ can be written
+\[
+   A = U\Sigma V\tp ,
+\]
+where $U\in\R^{m\times m}$ and $V\in\R^{n\times n}$ are orthogonal ($U\tp U=I$,
+$V\tp V=I$) and $\Sigma\in\R^{m\times n}$ is zero except for the diagonal entries
+$\sigma_1\ge\sigma_2\ge\dots\ge\sigma_r>0$. The $\sigma_i$ are the \emph{singular
+values}, the columns $v_i$ of $V$ the right singular vectors, and the columns $u_i$
+of $U$ the left singular vectors. Equivalently,
+\begin{equation}\label{eq:svddyad}
+   A = \sum_{i=1}^{r}\sigma_i\,u_iv_i\tp ,\qquad Av_i=\sigma_iu_i,\qquad A\tp u_i=\sigma_iv_i .
+\end{equation}
+\end{theorem}
+\begin{proof}[Construction]
+$A\tp A$ is symmetric and positive semidefinite, so by
+Theorem~\ref{thm:spectral} it has orthonormal eigenvectors $v_1,\dots,v_n$ with
+eigenvalues $\lambda_1\ge\dots\ge\lambda_n\ge0$, and by \eqref{eq:nullata}
+exactly $r$ of them are positive. Put $\sigma_i=\sqrt{\lambda_i}$ and
+$u_i=Av_i/\sigma_i$ for $i\le r$. These are orthonormal:
+\[
+   u_i\tp u_j=\frac{v_i\tp A\tp Av_j}{\sigma_i\sigma_j}
+            =\frac{\lambda_j\,v_i\tp v_j}{\sigma_i\sigma_j}=\delta_{ij}.
+\]
+Complete $u_1,\dots,u_r$ to an orthonormal basis of $\R^{m}$. Then $AV=U\Sigma$,
+column by column ($Av_i=0$ for $i>r$, since those $v_i$ lie in
+$\mathcal N(A\tp A)=\mathcal N(A)$), and multiplying by $V\tp$ on the right gives
+$A=U\Sigma V\tp$.
+\end{proof}
+So the singular values are
+\[
+   \sigma_i(A) = \sqrt{\lambda_i(A\tp A)} ,
+\]
+and the singular vectors are orthonormal bases for all four subspaces of
+\S\ref{sec:foursub} at once: $v_1,\dots,v_r$ span the row space and
+$v_{r+1},\dots,v_n$ the null space; $u_1,\dots,u_r$ span the column space and
+$u_{r+1},\dots,u_m$ the left null space. The rank is the number of nonzero
+singular values. The sum \eqref{eq:svddyad} is reading (iii) of \S\ref{sec:vspace},
+$AB=\sum a_ib_i\tp$, with the factors chosen orthonormal and ordered by size.
+
+\begin{example}[a $2\times2$ SVD]\label{ex:svd}
+Let $A=\begin{bmatrix}3&0\\4&5\end{bmatrix}$. Then
+$A\tp A=\begin{bmatrix}25&20\\20&25\end{bmatrix}$, with eigenvalues $45$ and $5$ and
+eigenvectors $v_1=\tfrac{1}{\sqrt2}(1,1)\tp$, $v_2=\tfrac1{\sqrt2}(1,-1)\tp$. So
+$\sigma_1=3\sqrt5\approx6.71$ and $\sigma_2=\sqrt5\approx2.24$, and
+\[
+   u_1=\frac{Av_1}{\sigma_1}=\frac{1}{\sqrt{10}}\begin{bmatrix}1\\3\end{bmatrix},\qquad
+   u_2=\frac{Av_2}{\sigma_2}=\frac{1}{\sqrt{10}}\begin{bmatrix}3\\-1\end{bmatrix},
+\]
+which are indeed orthogonal. As a check,
+$\sigma_1u_1v_1\tp+\sigma_2u_2v_2\tp=\tfrac32\begin{bmatrix}1&1\\3&3\end{bmatrix}
++\tfrac12\begin{bmatrix}3&-3\\-1&1\end{bmatrix}=A$, and
+$\sigma_1\sigma_2=15=|\det A|$. The eigenvalues of $A$ are $3$ and $5$ --- not the
+singular values. For a non-symmetric matrix the two are different objects; for a
+symmetric one the singular values are the absolute values of the eigenvalues.
+\end{example}
+
+\subsection{What the singular values measure}\label{sec:svduse}
+Read $A=U\Sigma V\tp$ from right to left: $V\tp$ rotates the input (it is
+orthogonal, so it preserves lengths), $\Sigma$ stretches the $i$-th coordinate by
+$\sigma_i$, and $U$ rotates the result. Hence $A$ maps the unit sphere onto an
+ellipsoid whose semi-axes are $\sigma_iu_i$, and the input directions that end up
+on those axes are the $v_i$ (Figure~\ref{fig:svd}).
+
+\begin{figure}[htb]
+\centering
+\begin{tikzpicture}[>=Stealth]
+  % ---- input: unit circle ----
+  \begin{scope}[scale=1.15]
+    \draw[->,gray] (-1.5,0) -- (1.6,0); \draw[->,gray] (0,-1.5) -- (0,1.6);
+    \draw[thick] (0,0) circle (1);
+    \draw[->,very thick] (0,0) -- (45:1) node[above right,lbl] {$v_1$};
+    \draw[->,very thick] (0,0) -- (-45:1) node[below right,lbl] {$v_2$};
+    \node[lbl] at (-1.15,1.35) {$\|x\|=1$};
+  \end{scope}
+  \draw[->,thick] (2.2,0.35) -- node[above,sig] {$A$} (3.4,0.35);
+  % ---- output: ellipse A(circle) ----
+  \begin{scope}[xshift=5.6cm,scale=0.33]
+    \draw[->,gray] (-4.6,0) -- (4.8,0); \draw[->,gray] (0,-7.2) -- (0,7.6);
+    \draw[thick] plot[domain=0:360,samples=120,smooth,variable=\a]
+      ({3*cos(\a)},{4*cos(\a)+5*sin(\a)});
+    \draw[->,very thick] (0,0) -- (2.121,6.364) node[right,lbl] {$\sigma_1u_1$};
+    \draw[->,very thick] (0,0) -- (2.121,-0.707) node[right,lbl] {$\sigma_2u_2$};
+  \end{scope}
+\end{tikzpicture}
+\caption{The SVD of Example~\ref{ex:svd} as a picture. The unit circle (left) is
+carried by $A$ onto an ellipse (right, drawn at one third the scale) with semi-axes
+$\sigma_1u_1$ and $\sigma_2u_2$, of lengths $3\sqrt5$ and $\sqrt5$. The input
+directions $v_1$ and $v_2$ are the ones that land on the axes.}
+\label{fig:svd}
+\end{figure}
+
+Several useful numbers follow directly.
+\begin{itemize}[leftmargin=*,itemsep=2pt]
+\item \textbf{Gain.} For every $x\neq0$,
+$\sigma_{\min}\le\|Ax\|/\|x\|\le\sigma_1$ (with $\sigma_{\min}=\sigma_n$ if
+$A$ has full column rank, and $0$ otherwise). The largest amplification is
+$\sigma_1$, attained for $x$ along $v_1$; it is the \emph{induced $2$-norm}
+$\|A\|_2=\sigma_1$. So singular values say how much a matrix can amplify, and in
+which input direction --- where eigenvalues say how fast each mode evolves.
+\item \textbf{Conditioning.} The ratio $\kappa(A)=\sigma_1/\sigma_r$ is the
+\emph{condition number}. When it is large, some input directions are amplified far
+more than others, and solving $Ax=b$ magnifies errors in $b$ by up to $\kappa$. A
+matrix that is invertible on paper but has $\sigma_r$ tiny is, numerically, nearly
+rank-deficient.
+\item \textbf{Low-rank approximation.} Truncating \eqref{eq:svddyad} after $k$
+terms, $A_k=\sum_{i\le k}\sigma_iu_iv_i\tp$, gives the closest matrix of rank $k$
+to $A$, with error $\|A-A_k\|_2=\sigma_{k+1}$. The singular values say exactly how
+much is lost by keeping only the strongest directions.
+\end{itemize}
+
+\begin{remark}[least squares]
+When $Ax=b$ has no solution ($b\notin\mathcal R(A)$), the SVD still gives the best
+one can do. The \emph{pseudo-inverse} $A^{+}=V\Sigma^{+}U\tp$, where $\Sigma^{+}$
+inverts the nonzero singular values and transposes the shape, yields
+$x=A^{+}b$, which minimizes $\|Ax-b\|$ and, among all minimizers, has the smallest
+norm. If $A$ has full column rank, $A^{+}=(A\tp A)^{-1}A\tp$, which is invertible by
+\eqref{eq:nullata}.
+\end{remark}
+
+\end{document}

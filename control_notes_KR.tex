@@ -1,0 +1,2847 @@
+% !TEX program = xelatex
+% !TEX encoding = UTF-8 Unicode
+%
+% 제어공학개론 -- 강의노트 (한글판), 2026년 2학기
+% 회차를 따로 나누지 않고 하나의 문서로 이어 붙인다. 새 강의는 해당 절에 녹인다.
+% 영문판과 공유하는 설정은 전부 controlnotes.sty 에 있다.
+% 컴파일:  xelatex control_notes_KR.tex   (목차 때문에 세 번 — publish.sh 가 해 준다)
+%
+% 앞으로의 규칙:
+%   1. 새 강의 내용은 주제가 맞는 대단원의 절에 녹인다 — 새 장으로 덧붙이지
+%      않는다.
+%   2. 정말로 새 주제가 시작되면 \partdivider 로 새 대단원을 연다. 절 번호는
+%      대단원과 무관하게 이어서 붙인다 — 다시 1부터 세지 않는다.
+%   3. 그 강의의 새 내용이 시작되는 자리에 \lecturebreak 를 넣고, 앞부분 회차
+%      표에 같은 자리를 가리키는 행을 한 줄 추가한다. (lectures.py 가 국문판
+%      표의 마지막 행을 읽어 manifest 의 lectures 필드를 만든다.)
+%   4. "강의의 흐름" 목록에서 해당 대단원을 진행 중/완료로 고친다. 예정 항목은
+%      근거가 있는 것 — 강의에서 실제로 밝힌 계획 — 만 적는다.
+%   5. 두 판의 대단원·절·label 구조는 1:1 로 유지한다.
+%
+\documentclass[11pt]{article}
+\usepackage[korean]{controlnotes}
+
+%% ---- 머리표에 들어가는 항목 ------------------------------------------------
+%% \lectitle 은 기존 제목 블록의 "강의노트" 와 아래 회차↔절 대응표의 범위를
+%% 합친 것이고, 학기와 날짜는 저자 밑에 있던 그 줄의 나머지 두 조각이다.
+%% \lecnum 과 \lecturer 는 비워 둔다 — 회차별이 아닌 단일 문서이고 교수님
+%% 성함은 노트 어디에도 적혀 있지 않다.
+\coursename{제어공학개론}
+\term{2026학년도 2학기}
+\lectitle{강의노트: 제1강$\sim$제10강}
+\lecdate{최종 수정 2026년 10월 10일}
+\scribe{우수한}
+
+\begin{document}
+\makelecheader
+
+\section*{강의의 흐름}
+
+제1강에서 밝힌 수업의 흐름은 세 단계였다. 먼저 동적 시스템을 전달함수와 상태변수
+표현법으로 \emph{모델링}하고 그 모델을 \emph{해석}하는 법을 배우고, 중반부에는
+선형대수와 MATLAB에 집중하며, 후반부에는 안정도, 제어기 설계, 고전 제어를 다룬다.
+구체적으로 배울 것으로는 PID 제어, 상태궤환 제어기, 상태변수 관측기, 추종 제어기,
+Bode 선도와 Nyquist 선도가 꼽혔다. 이 노트의 대단원도 그 계획을 따른다.
+
+\begin{itemize}[leftmargin=1.2em,itemsep=1pt,topsep=3pt]
+  \item 제1부 --- 되먹임과 모델링 \hfill {\small\S\S1--2}
+  \item 제2부 --- 상태공간 모델과 선형화 \hfill {\small\S\S3--4}
+  \item 제3부 --- 전달함수 \hfill {\small\S5}
+  \item 제4부 --- 주파수 응답과 안정도 \hfill {\small\S\S6--7}
+  \item 제5부 --- 상태공간을 위한 선형대수 \hfill {\small\S\S8--11, 진행 중}
+  \item \emph{안정도, 제어기 설계, 고전 제어} --- 상태궤환 제어기, 상태변수 관측기,
+        추종 제어기, PID 제어 \hfill {\small 예정}
+\end{itemize}
+
+예정 항목은 제1강에서 설명한 그대로 적은 것이며, 이것이 대단원으로 어떻게 나뉠지는
+강의가 진행되는 대로 정한다. 질문~\ref{q:goal}의 목표 --- 두 수레를 인자 값을 모르는
+채로 5초 뒤 $1$\,m 앞에 세우는 것 --- 는 제어기 설계 문제이고, 지금까지의 대단원은
+그 설계에 필요한 모델과 해석을 쌓는 과정이다.
+
+\section*{이 노트의 구성}
+
+이 노트는 날짜순이 아니라 주제순으로 엮었다. 수업의 단계마다 대단원(부)을 하나씩
+두고, 새 강의는 새 장으로 덧붙이지 않고 해당하는 대단원과 절 안에 녹여 넣으므로 같은
+말이 두 번 나오지 않는다. 절 번호는 대단원과 상관없이 문서 처음부터 끝까지 이어진다.
+각 강의의 새 내용이 시작되는 자리에는 강의 번호와 날짜를 단 가는 가로줄을 그어 두었고,
+아래 표도 같은 자리를 가리킨다. 여러 강의를 한 단위로 묶어 정리한 곳에는 가로줄
+하나가 그 범위 전체를 맡는다. \textbf{보충}과 \textbf{예제}는 수업 시간에 칠판에 다
+적지 못한 유도·예제·그림을 채운 것으로, 주제에 맞는 자리에 놓았다. 그러니 가로줄은
+그 강의가 시작된 자리를 표시할 뿐, 그 뒤의 내용이 모두 그 강의에서 나왔다는 뜻은
+아니다.
+
+\smallskip
+\begin{center}\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+회차 & 날짜 & 시작하는 곳\\
+\midrule
+제1강 & 2026.\,09.\,02 (수) & \S1\\
+제2강 & 2026.\,09.\,07 (월) & \S2\\
+제3강 & 2026.\,09.\,09 (수) & \S4\\
+제4강 & 2026.\,09.\,14 (월) & \S5\\
+제5강 & 2026.\,09.\,16 (수) & \S\ref{sec:polezero}\\
+제6강 & 2026.\,09.\,21 (월) & \S\ref{sec:second}\\
+제7$\sim$10강 & 2026.\,09.\,23 (수) $\sim$ 10.\,07 (수) & \S\ref{sec:vspace}\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+{\small\tableofcontents}
+
+%% ================================================================ 제1부
+\partdivider{제1부 --- 되먹임과 모델링}
+
+\lecturebreak{제1강}{2026년 9월 2일}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{제어공학이란 무엇을 하는 학문인가}
+
+\subsection{질문 하나} 제어공학은 질문 하나에서 출발한다.
+\begin{center}
+\emph{원하는 출력을 얻으려면 입력을 어떻게 주어야 하는가?}
+\end{center}
+이 질문에 답하려면 먼저 입력과 출력이 어떤 관계인지를 알아야 하고, 물리적인
+시스템에서 그 관계는 거의 언제나 \emph{미분방정식}으로 주어진다. 그래서 이
+과목은 제어기가 아니라 미분방정식에서 시작한다.
+
+한 학기 내내 따라다닐 단어가 둘 있다. 첫째는 \textbf{불확실성}(uncertainty)이다.
+우리가 적어 놓은 미분방정식은 실제 세계가 따르는 그 방정식이 결코 아니다. 둘째는
+\textbf{되먹임}(feedback)이다. 출력을 재서 입력으로 되돌리는 이 구조가 설계를
+불확실성 속에서 살아남게 한다.
+
+실제 제어 시스템은 센서, 액추에이터, 컴퓨터, 제어기, 그리고 이들 사이의 통신으로
+이루어진다. 이 노트에서는 그 전부를 들어가는 신호 $u(t)$와 나오는 신호 $y(t)$로
+추상화한다. 출력 $y$가 반드시 연속적으로 변하며 따라가야 할 양일 필요는 없다.
+``저 지점에 가서 서 있어라'' 같은 것도 똑같이 출력으로 잡을 수 있고, 같은
+도구로 다룬다.
+
+\subsection{동적 대 정적} \emph{정적}(static) 관계는 시각 $t$의 $y$가 같은 시각의
+$u$만으로 정해지는 관계다. \emph{동적}(dynamic) 관계에는 기억이 있다. 지금의
+출력이 과거의 입력에 의존한다. 가장 단순한 예는 1차 선형 미분방정식
+\begin{equation}\label{eq:rl}
+   L\dot y + Ry = u(t)
+\end{equation}
+로, 예컨대 전압원 $u$로 구동되는 $RL$ 회로에서 $y$를 전류로 본 것이다. 앞으로
+$y^{*}(t)$는 \emph{원하는} 출력을, $u(t)$는 제어 입력을 뜻한다.
+
+\begin{note}
+$y$는 그때그때 출력인 양을 가리키는 기호일 뿐이다. \eqref{eq:rl}에서는 전류였고
+바로 다음 예제에서는 위치다. 수식은 신경 쓰지 않지만 단위는 신경 쓰므로, 무엇의
+$y$인지는 늘 확인해야 한다.
+\end{note}
+
+\subsection{첫 예제: 중력을 이기고 물체를 붙들어 두기}
+연직 방향으로만 움직이는 질량 $m$의 물체를 생각하자(그림~\ref{fig:mass}).
+위쪽을 양으로 하여 위치를 $y(t)$라 하고, 제어력 $u(t)$와 중력이 작용한다.
+\begin{equation}\label{eq:mass}
+   m\ddot y = u - mg .
+\end{equation}
+목표는 높이 $h$에 붙들어 두는 것이다. 즉 원하는 출력은 상수 $y^{*}(t)=h$이고,
+물체는 거기서 정지한 채로 출발한다. 즉 $y(0)=h$, $\dot y(0)=0$.
+
+\begin{figure}[htb]
+\centering
+\begin{tikzpicture}[>=Stealth,scale=1.0]
+  \draw[thick] (-0.15,0) -- (5.0,0);
+  \foreach \x in {0.05,0.35,...,4.95}{\draw[thin] (\x,0) -- ++(-0.22,-0.22);}
+  \draw[->,thick] (0.25,0) -- (0.25,3.55) node[left] {$y$};
+  \draw[dashed] (0.25,2.50) -- (4.95,2.50);
+  \node[right] at (4.95,2.50) {$y^{*}=h$};
+  \draw[thick,fill=black!5] (1.95,2.10) rectangle (3.15,2.90);
+  \node at (2.55,2.50) {$m$};
+  \draw[very thick,->] (2.20,1.15) -- (2.20,2.07);
+  \node[left,sig] at (2.10,1.58) {$u(t)$};
+  \draw[very thick,->] (2.90,2.07) -- (2.90,1.15);
+  \node[right,sig] at (2.92,1.58) {$mg$};
+  \draw[<->] (1.15,0) -- (1.15,2.50);
+  \node[left,sig] at (1.13,1.25) {$y(t)$};
+\end{tikzpicture}
+\caption{중력을 이기고 제어력으로 붙들어 둔 물체. $y(t)$가 $h$에 머물도록
+$u(t)$를 고르는 것이 제어 문제다.}
+\label{fig:mass}
+\end{figure}
+
+\smallskip
+\noindent\textbf{(a) 개루프.} \eqref{eq:mass}에 $\ddot y=0$을 넣으면 $u=mg$가
+나온다. 이 상수 입력을 주면 $\ddot y \equiv 0$이고, 위 초기조건과 함께 보면
+$y(t)\equiv h$가 영원히 유지된다. 종이 위에서는 되먹임 없이 문제가 풀렸다.
+
+\smallskip
+\noindent\textbf{(b) 문제: 불확실성.} 그런데 우리는 $m$을 모른다. 아는 것은
+추정값 $\hat m$뿐이고, 그래서 실제로 주는 입력은 $u=\hat m g$다. 그러면
+\eqref{eq:mass}는 $m\ddot y = \hat m g - mg = (\hat m - m)g$가 되어 \emph{0이
+아닌 일정한 가속도}가 남는다. 두 번 적분하면
+\[
+   y(t) = h + \frac{(\hat m-m)g}{2m}\,t^{2}\;\longrightarrow\;\pm\infty .
+\]
+모델링 오차 $\hat m - m$이 아무리 작아도 물체는 결국 떠나 버린다. 개루프 설계는
+단지 부정확한 것이 아니라 질적으로 실패한다.
+
+\smallskip
+\noindent\textbf{(c) 처방: 되먹임.} $y$와 $\dot y$를 재서
+\begin{equation}\label{eq:pd}
+   u(t) = -c\,\dot y - k\,(y-h) + \hat m g
+\end{equation}
+를 준다. 여기서 $c$와 $k$는 \emph{이득}(gain), 즉 우리가 정하는 숫자다. 우리가
+직접 고르므로 여기에는 불확실성이 없다. \eqref{eq:pd}를 \eqref{eq:mass}에 넣으면
+\begin{equation}\label{eq:massfb}
+   m\ddot y + c\,\dot y + k\,(y-h) = (\hat m-m)g
+\end{equation}
+이고, $c,k>0$이면 상수로 구동되는 감쇠 2차 시스템이므로 $y$는 어딘가에 정착한다.
+$\ddot y=\dot y=0$으로 두면 그 정착값은
+\begin{equation}\label{eq:offset}
+   y(\infty) = h + \frac{(\hat m - m)g}{k}
+\end{equation}
+이다. 오차가 이제 \emph{유계}이고, $k$를 키우면 줄어든다. 되먹임이 불확실성을
+없앤 것이 아니라, 발산하던 오차를 작은 오차로 바꾼 것이다.
+
+\begin{question}
+왜 이게 잘 되는가? $c$와 $k$는 얼마로 잡아야 하는가? $k$를 얼마나 키워도 되는가
+(어디서부터 다른 것이 망가지는가)? 이 질문들에 답하는 것이 남은 학기의 내용이다.
+\end{question}
+
+\subsection{불확실성, 강인성, 그리고 학습}
+공칭 모델에 대해 제어기를 설계하는 것은 일의 절반이다. 나머지 절반은 실제
+시스템이 될 수 있는 플랜트의 \emph{집합} 전체에 대해 여전히 잘 동작함을
+보장하는 것이고, 이것이 \emph{강인}(robust) 제어공학이 다루는 문제다.
+
+수업에서는 이것을 강화학습과 대비해서 설명했다. 강화학습은 모델 대신 보상
+신호로 정책을 학습한다. 그 특유의 난점이 \emph{sim-to-real gap}이다. 시뮬레이터
+안에서 잘 맞춘 정책이 실제 하드웨어에서는 그대로 동작하지 않는다. 표준적인
+처방인 domain randomization 계열 --- 무작위화한 시뮬레이터 집합 위에서 학습시켜
+어느 한 불일치도 치명적이지 않게 만드는 것 --- 은 사실 강인성 아이디어를 다른
+이름으로 쓴 것이다. 휴리스틱하지만, 쓸 만한 물리 모델을 얻기 어려운 곳에서는
+바로 그 점 때문에 강력하다. 반대로 모델 기반 설계는 수학적이어서, 원리적으로는
+요구사항에서 거꾸로 제어기를 유도해 갈 수 있다. 물론 그것도 쉽지 않고, 이 과목의
+상당 부분이 그 방법을 배우는 데 쓰인다.
+
+%% ------------------------------------------------------------------ 제2강
+\lecturebreak{제2강}{2026년 9월 7일}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{모델링: Two-Cart 시스템}
+
+\subsection{한 학기 동안 쓸 예제}
+이 과목을 끝까지 따라다닐 예제는 그림~\ref{fig:twocart}의 \emph{two-cart
+시스템}이다. 질량 $m_1$인 수레가 위치 $p_1(t)$에서 힘 $u(t)$로 밀리고, 강성
+$k$인 스프링과 감쇠계수 $b$인 댐퍼를 통해 질량 $m_2$, 위치 $p_2(t)$인 두 번째
+수레와 연결되어 있다. 두 수레 모두 계수 $c$의 지면 마찰을 받는다. 측정하는
+출력은 두 번째 수레의 위치 $y(t) = p_2(t)$다. 그리고 $p_1(0)=p_2(0)=0$으로 둔다.
+즉 위치는 출발점 기준으로 잰다.
+
+\begin{figure}[htb]
+\centering
+\begin{tikzpicture}[>=Stealth,scale=1.05]
+  \draw[thick] (-0.85,0) -- (7.75,0);
+  \foreach \x in {-0.6,-0.25,...,7.7}{\draw[thin] (\x,0) -- ++(-0.25,-0.25);}
+  \draw[thick,fill=black!5] (0.40,0.36) rectangle (2.00,1.60);
+  \node at (1.20,0.98) {$m_1$};
+  \draw[thick,fill=black!5] (5.00,0.36) rectangle (6.60,1.60);
+  \node at (5.80,0.98) {$m_2$};
+  \foreach \x in {0.80,1.60,5.40,6.20}{\draw[thick,fill=white] (\x,0.18) circle (0.18);}
+  \draw[thick] (2.00,1.28) -- (2.35,1.28);
+  \draw[thick,decorate,decoration={coil,aspect=0.62,segment length=3.8mm,amplitude=2.2mm}]
+       (2.35,1.28) -- (4.65,1.28);
+  \draw[thick] (4.65,1.28) -- (5.00,1.28);
+  \node[above] at (3.50,1.44) {$k$};
+  \draw[thick] (2.00,0.68) -- (3.20,0.68);
+  \draw[thick] (3.20,0.46) rectangle (3.78,0.90);
+  \draw[thick] (3.62,0.46) -- (3.62,0.90);
+  \draw[thick] (3.62,0.68) -- (5.00,0.68);
+  \node[below] at (2.58,0.63) {$b$};
+  \draw[very thick,->] (-0.80,0.98) -- (0.38,0.98);
+  \node[above] at (-0.22,1.02) {$u(t)$};
+  \draw[dashed,gray] (1.20,0) -- (1.20,-0.62);
+  \draw[->] (1.20,-0.62) -- (0.35,-0.62);
+  \node[right,lbl] at (1.26,-0.62) {$c\,\dot p_1$};
+  \draw[dashed,gray] (5.80,0) -- (5.80,-0.62);
+  \draw[->] (5.80,-0.62) -- (4.95,-0.62);
+  \node[right,lbl] at (5.86,-0.62) {$c\,\dot p_2$};
+  \draw[dashed] (1.20,1.60) -- (1.20,2.42);
+  \draw[dashed] (5.80,1.60) -- (5.80,2.42);
+  \draw[->] (1.20,2.22) -- ++(0.90,0); \node[above] at (1.65,2.22) {$p_1(t)$};
+  \draw[->] (5.80,2.22) -- ++(0.90,0); \node[above] at (6.25,2.22) {$p_2(t)=y(t)$};
+\end{tikzpicture}
+\caption{Two-cart 시스템. 스프링 $k$와 댐퍼 $b$는 두 수레 \emph{사이}에 걸려
+있고, 지면 마찰 $c$는 각 수레에 따로 작용하여 그 속도를 거스른다.}
+\label{fig:twocart}
+\end{figure}
+
+\begin{question}[학기 전체의 목표]\label{q:goal}
+\emph{5초 뒤에 1\,m 앞에서 정지}하게 만들어라. 그것도 $m_1$, $k$, $m_2$의 값을
+모르는 채로 할 수 있게.
+\end{question}
+
+질문~\ref{q:goal}의 뒷문장이 진짜 내용이다. 플랜트를 정확히 알고 있으면 목표를
+맞히는 것은 누구나 할 수 있다. 그 값을 몰라도 동작하는 것이 제어 설계다.
+
+\subsection{운동방정식}
+각 수레에 Newton의 법칙을 쓴다. 수레 1은 $u$로 밀리고, 스프링에 의해 수레 2 쪽으로
+당겨지고, 두 수레의 상대운동에 의해 감쇠되며, 지면 마찰로 끌린다. 수레 2도
+입력만 빼면 같다.
+\begin{equation}\label{eq:eom}
+\left\{
+\begin{aligned}
+   m_1\ddot p_1 &= u(t) + k\,(p_2-p_1) + b\,(\dot p_2-\dot p_1) - c\,\dot p_1,\\
+   m_2\ddot p_2 &= \phantom{u(t)\;+{}} k\,(p_1-p_2) + b\,(\dot p_1-\dot p_2) - c\,\dot p_2,\\
+   y &= p_2 .
+\end{aligned}\right.
+\end{equation}
+
+\begin{remark}[결합항의 부호]
+스프링과 나란히 달린 댐퍼는 양 끝의 \emph{상대} 운동에 저항하므로, 수레 1에
+작용하는 댐퍼 힘은 스프링 힘과 정확히 같은 부호 구조를 갖는다. 즉
+$+\,k(p_2-p_1)$과 $+\,b(\dot p_2-\dot p_1)$이고, 수레 2에는 그 거울상이
+작용한다. 이 부호가 물리적으로 맞는 부호임을 빠르게 확인하는 방법은 스프링의
+늘어난 양 $q=p_1-p_2$를 보는 것이다. 두 식을 빼면 (간단히 $c=0$으로 두고)
+\[
+   \ddot q + b\Bigl(\tfrac1{m_1}+\tfrac1{m_2}\Bigr)\dot q
+           + k\Bigl(\tfrac1{m_1}+\tfrac1{m_2}\Bigr)q = \frac{u}{m_1}
+\]
+로 감쇠 진동자가 된다. 두 수레가 서로 엇갈려 흔들리는 내부 모드가 댐퍼를 통해
+에너지를 잃는 것이고, 당연히 그래야 한다. 두 결합항 중 어느 하나의 부호라도
+뒤집으면 그 모드는 음의 강성이나 음의 감쇠를 갖게 된다.
+\end{remark}
+
+\begin{note}[기호]
+이 과목 전체에서 $c$는 \emph{지면 마찰} 계수, $b$는 \emph{두 수레 사이의
+댐퍼}다.
+\end{note}
+
+\subsection{같은 시스템을 적는 세 가지 방법}
+\begin{figure}[htb]
+\centering
+\begin{tikzpicture}[>=Stealth]
+  \node (ph) [blk] {물리\\ 시스템};
+  \node (de) [blk,right=17mm of ph] {미분\\ 방정식};
+  \node (tf) [blk,above right=6mm and 20mm of de] {전달함수 표현형\\ $P(s)=Y(s)/U(s)$};
+  \node (ss) [blk,below right=6mm and 20mm of de] {상태공간 표현형\\ $\dot x=Ax+Bu$};
+  \draw[->,thick] (ph) -- node[above,lbl] {모델링} (de);
+  \draw[->,thick] (de.east) -- node[above,sloped,lbl,pos=0.60] {라플라스} (tf.west);
+  \draw[->,thick] (de.east) -- node[below,sloped,lbl,pos=0.60] {상태변수} (ss.west);
+  \draw[<->,thick] (tf) -- node[right,lbl,align=left]
+        {\ref{sec:ss2tf}절\\ 실현} (ss);
+  \draw[->,dashed] (ph.north) to[bend left=26]
+        node[above,lbl] {data-driven} (tf.north west);
+  \draw[->,dashed] (ph.south) to[bend right=26]
+        node[below,lbl] {data-driven} (ss.south west);
+\end{tikzpicture}
+\caption{물리 시스템에서 수학적 모델로 가는 경로. 실선이 이 과목이 가는 길이다.
+점선은 데이터로부터의 시스템 식별$\cdot$학습(신경망 등)으로, 미분방정식 단계를
+아예 건너뛴다.}
+\label{fig:routes}
+\end{figure}
+
+전달함수 표현형과 상태공간 표현형은 같은 미분방정식을 적는 두 가지 방법이고,
+선형 시스템에서는 서로 오갈 수 있다. 그림~\ref{fig:routes}의 양방향 화살표가
+그것이다. 두 방향 중 하나는 \ref{sec:ss2tf}절에서 실제로 계산한다.
+
+%% ================================================================ 제2부
+\partdivider{제2부 --- 상태공간 모델과 선형화}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{상태공간 표현}
+
+\subsection{상태변수}
+\eqref{eq:eom}은 2계 방정식이다. 시스템이 가진 독립적인 ``기억'' 하나마다 변수를
+하나씩 도입하자. 여기서는 수레마다 위치 하나와 속도 하나다.
+\[
+   x_1 = p_1,\qquad x_2=\dot p_1,\qquad x_3=p_2,\qquad x_4=\dot p_2 .
+\]
+그러면 \eqref{eq:eom}은 네 개의 \emph{1계} 방정식이 된다.
+\begin{equation}\label{eq:statelines}
+\left\{
+\begin{aligned}
+   \dot x_1 &= x_2, \\
+   \dot x_2 &= \frac{k}{m_1}(x_3-x_1) - \frac{c}{m_1}x_2 + \frac{b}{m_1}(x_4-x_2) + \frac{1}{m_1}u, \\
+   \dot x_3 &= x_4, \\
+   \dot x_4 &= \frac{k}{m_2}(x_1-x_3) - \frac{c}{m_2}x_4 + \frac{b}{m_2}(x_2-x_4), \\
+   y &= x_3 .
+\end{aligned}\right.
+\end{equation}
+네 식은 서로 잔뜩 얽혀 있지만 하나하나는 모두 1계이고, 바로 그 점이 이 식들을
+다루기 쉽게 만든다. 컴퓨터로 풀기에도, 선형대수로 다루기에도 그렇다.
+
+\subsection{표준형}\label{sec:stdform}
+$x=(x_1,x_2,x_3,x_4)\tp$로 모으면 \textbf{상태변수 표현형의 표준형}에 도달한다.
+\begin{equation}\label{eq:std}
+   \boxed{\;\dot x(t) = A\,x(t) + B\,u(t),\qquad y(t) = C\,x(t) + D\,u(t).\;}
+\end{equation}
+각 신호의 차원은
+\begin{equation}\label{eq:dims}
+   x(t)\in\R^{n},\qquad u(t)\in\R^{m},\qquad y(t)\in\R^{p}
+\end{equation}
+이고, 따라서 $A\in\R^{n\times n}$, $B\in\R^{n\times m}$, $C\in\R^{p\times n}$,
+$D\in\R^{p\times m}$이다. 공간 $\R^{n}$을 \textbf{상태공간}(state space)이라
+부르고, 상태변수의 개수 $n$이 시스템의 \emph{차수}(order)다. $m=p=1$인 시스템을
+SISO(단일입력 단일출력)라 하고, 그렇지 않으면 MIMO(다중입력 다중출력)라 한다.
+세 차원은 서로 독립이라는 점에 유의하자. 상태는 많은데 입력은 하나뿐인 플랜트도
+있고, 입력은 여럿인데 출력은 하나인 플랜트도 있다.
+
+Two-cart 시스템에서는 $n=4$, $m=p=1$이다. 성분을 짧게 적기 위해 $b=0$으로 두면
+\begin{equation}\label{eq:ABCD}
+ A=\begin{bmatrix}
+     0 & 1 & 0 & 0\\[2pt]
+     -\dfrac{k}{m_1} & -\dfrac{c}{m_1} & \dfrac{k}{m_1} & 0\\[6pt]
+     0 & 0 & 0 & 1\\[2pt]
+     \dfrac{k}{m_2} & 0 & -\dfrac{k}{m_2} & -\dfrac{c}{m_2}
+   \end{bmatrix},\quad
+ B=\begin{bmatrix}0\\[2pt] \dfrac{1}{m_1}\\[6pt] 0\\[2pt] 0\end{bmatrix},\quad
+ C=\begin{bmatrix}0&0&1&0\end{bmatrix},\quad D = 0 .
+\end{equation}
+
+\begin{remark}[불확실성이 어디에 있는가]
+$A$의 1행과 3행에는 파라미터가 하나도 없다. 이 두 행은 물리가 아니라 정의
+$\dot x_1=x_2$, $\dot x_3=x_4$이고, 수레의 질량이 얼마든 정확히 성립한다. 모델의
+불확실성은 전부 2행과 4행에 갇혀 있다. 기계 시스템의 상태공간 모델이 일반적으로
+갖는 유용한 성질이다. 운동학을 적은 행은 정확하고, Newton의 법칙을 담은 행만이
+우리가 모를 수도 있는 파라미터를 품는다.
+\end{remark}
+
+\begin{remark}[댐퍼를 남겨 두면]
+$b$를 버리지 않으면 2행과 4행만 바뀐다.
+\[
+   A_{2\bullet}=\Bigl[-\tfrac{k}{m_1},\;-\tfrac{c+b}{m_1},\;\tfrac{k}{m_1},\;\tfrac{b}{m_1}\Bigr],
+   \qquad
+   A_{4\bullet}=\Bigl[\tfrac{k}{m_2},\;\tfrac{b}{m_2},\;-\tfrac{k}{m_2},\;-\tfrac{c+b}{m_2}\Bigr].
+\]
+댐퍼는 대각선의 속도 항에 더해지고, 스프링이 두 위치를 결합하는 것과 똑같은
+방식으로 두 속도를 결합한다.
+\end{remark}
+
+MATLAB에서는 이 네 행렬을 \verb|sys = ss(A,B,C,D)|로 묶는다.
+
+\subsection{``상태''란 무엇인가}
+\begin{definition}[상태]\label{def:state}
+\emph{상태} $x(t)$란, 시각 $t$ 이후의 입력 $u(\tau)$ ($\tau\ge t$)가 주어졌을 때
+이후의 출력 $y(\tau)$를 모두 결정하기 위해 시각 $t$에 필요한 \emph{최소한의}
+정보량이다.
+\end{definition}
+시각 $t$ 이전에 무슨 일이 있었든, 그것은 오직 $x(t)$를 통해서만 미래에 영향을
+준다. 두 수레의 경우 지금 두 수레가 어디에 있고 얼마나 빠른지만 알면 충분하며,
+지나온 경로는 알 필요가 없다. 정의에서 진짜 일하는 단어는 \emph{최소한의}다.
+상태가 여기서 5차원이 아니라 4차원인 이유가 그것이다.
+
+\begin{remark}\label{rem:nonlinear}
+정의~\ref{def:state}에는 선형성에 관한 말이 한 마디도 없다. 실제로 상태공간
+표현형은 비선형 시스템에도 그대로 쓸 수 있다(\ref{sec:nonlinear}절). 전달함수는
+그렇지 않다. 전달함수는 선형 시스템에만 존재한다.
+\end{remark}
+
+\subsection{표준형의 수치 적분}
+\eqref{eq:std}이 1계 연립방정식이기 때문에 컴퓨터는 이것을 그대로 앞으로 굴릴 수
+있다. 그중 가장 소박하고, 이 과목이 출발점으로 삼는 방법이 \emph{전진 오일러}
+(forward Euler)다. 작은 스텝 $h>0$에 대해
+\begin{equation}\label{eq:euler}
+   x(t+h) \;\approx\; x(t) + h\,\bigl(Ax(t)+Bu(t)\bigr),
+\end{equation}
+비선형 우변이면 $x(t+h)\approx x(t)+h\,f(x(t),u(t))$. 이것은 $x$를 $t$ 둘레에서
+테일러 전개한 첫 두 항에 지나지 않으므로, 한 스텝에서 생기는 오차는 $h^{2}$
+차수다. 그렇다고 $h$를 아무렇게나 고를 수는 없다. 너무 크면 시스템 자체는
+발산하지 않는데 시뮬레이션만 발산한다.
+
+\begin{remark}[얼마나 큰 스텝까지]\label{rem:eulerstab}
+$h$의 한계는 스칼라 시험방정식 $\dot x=\lambda x$에서 정확히 계산할 수 있다.
+참해는 $\operatorname{Re}\lambda<0$이면 언제나 감쇠한다. 오일러 한 스텝은 $x$에
+일정한 인수를 곱하므로
+\[
+   x_{k+1} = (1+h\lambda)\,x_k ,\qquad x_k = (1+h\lambda)^{k}x_0 ,
+\]
+시뮬레이션이 감쇠하려면 $|1+h\lambda|<1$, 즉 $h\lambda$가 $-1$을 중심으로 하는
+단위원판 안에 있어야만 한다. 실수 $\lambda<0$이면 이는
+\[
+   h < \frac{2}{|\lambda|}
+\]
+라는 뜻이다. 선형 시스템 $\dot x=Ax$에서는 같은 조건이 $A$의 모든 고윳값에 대해
+동시에 성립해야 하므로, 가장 빠른 모드가 스텝을 정한다. 최악의 경우는 허수축
+위나 그 가까이에 있는 고윳값, 즉 감쇠가 약한 진동이다. $\sigma$가 작은
+$\lambda=-\sigma\pm j\omega$에 대해 조건 $|1+h\lambda|<1$은
+$h<2\sigma/(\sigma^{2}+\omega^{2})$가 되고, $\sigma\ll\omega$이면 이 값은 아주
+작다. 순허수 $\lambda$는 이 조건을 결코 만족할 수 없다. 전진 오일러는 감쇠 없는
+진동을 모두 커지는 진동으로 바꿔 버린다.
+\end{remark}
+
+%% ------------------------------------------------------------------ 제3강
+\lecturebreak{제3강}{2026년 9월 9일}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{비선형 시스템, 평형점, 선형화}\label{sec:nonlinear}
+
+\subsection{비선형 표준형}
+실제 시스템은 대개 선형이 아니다. 앞으로 쓸 일반형은
+\begin{equation}\label{eq:nl}
+   \dot z = f(z,u),\qquad w = h(z,u)
+\end{equation}
+이며 $z(t)\in\R^{n}$, $u(t)\in\R^{m}$, $w(t)\in\R^{p}$이고
+\[
+   f:\R^{n}\times\R^{m}\to\R^{n},\qquad h:\R^{n}\times\R^{m}\to\R^{p}
+\]
+는 \emph{regular}하다고 --- 아래에서 쓸 미분이 존재할 만큼 매끄럽다고 --- 가정한다.
+풀어 쓰면 \eqref{eq:nl}은
+\[
+   \dot z=\begin{pmatrix}\dot z_1\\ \vdots\\ \dot z_n\end{pmatrix}
+        =\begin{pmatrix}f_1(z(t),u(t))\\ \vdots\\ f_n(z(t),u(t))\end{pmatrix}
+\]
+이다.
+
+\begin{note}[이 절의 기호]
+비선형 시스템에는 $(z,u,w)$를, 선형 시스템에는 $(x,u,y)$를 쓴다. 선형화한
+모델의 변수는 물리량 자체가 아니라 동작점으로부터의 \emph{편차}가 되기 때문이다.
+이 둘을 섞는 것이 이 단원에서 가장 흔한 실수다.
+\end{note}
+
+\begin{example}[진자]\label{ex:pend}
+질량이 $m$, 길이 $\ell$인 무게 없는 막대에 달린 진자가 있고, 회전축에 점성마찰
+$b$가 있으며 토크 $u(t)$를 걸 수 있다고 하자(그림~\ref{fig:pend}). 운동방정식은
+\[
+   m\ell^{2}\ddot\theta = u(t) - mg\ell\sin\theta - b\,\dot\theta,
+   \qquad\text{즉}\qquad
+   m\ell^{2}\ddot\theta + b\,\dot\theta + mg\ell\sin\theta = u(t)
+\]
+이고, $\theta$는 아래쪽 연직 방향에서 잰 각이다. $z_1=\theta$, $z_2=\dot\theta$로
+두면 정확히 \eqref{eq:nl}의 꼴이 된다.
+\begin{equation}\label{eq:pendstate}
+\left\{
+\begin{aligned}
+   \dot z_1 &= z_2,\\
+   \dot z_2 &= -\frac{b}{m\ell^{2}}\,z_2 - \frac{g}{\ell}\sin z_1
+               + \frac{1}{m\ell^{2}}\,u,\\
+   w &= z_1 .
+\end{aligned}\right.
+\end{equation}
+어려운 것은 오직 $\sin z_1$ 하나다. 나머지는 전부 선형이다.
+\end{example}
+
+\begin{figure}[htb]
+\centering
+\begin{tikzpicture}[>=Stealth,scale=1.25]
+  \draw[thick] (-1.45,0) -- (1.45,0);
+  \foreach \x in {-1.35,-1.05,...,1.42}{\draw[thin] (\x,0) -- ++(-0.22,0.22);}
+  \draw[dashed] (0,0) -- (0,-2.95);
+  \draw[thick] (0,0) -- (1.30,-2.25);
+  \draw[thick,fill=black!10] (1.30,-2.25) circle (0.28);
+  \node[sig] at (1.30,-2.25) {$m$};
+  \fill (0,0) circle (2.4pt);
+  \draw[->] (0,-1.25) arc (-90:-60:1.25);
+  \node at (0.38,-1.46) {$\theta$};
+  \node[right,sig] at (1.00,-1.66) {$\ell$};
+  \draw[very thick,->] (1.30,-2.62) -- (1.30,-3.38);
+  \node[right,sig] at (1.34,-3.02) {$mg$};
+  \draw[->,thick] (190:0.88) arc (190:256:0.88);
+  \node[left,sig] at (-0.94,-0.52) {$u(t)$};
+  \node[left,sig] at (-0.06,-0.24) {$b$};
+\end{tikzpicture}
+\caption{예제~\ref{ex:pend}의 진자. $\theta$는 아래쪽 연직 방향에서 재고, $b$는
+회전축의 점성마찰, $u(t)$는 가해 주는 토크다.}
+\label{fig:pend}
+\end{figure}
+
+\subsection{평형점} \eqref{eq:nl}을 다루는 요령은 아무 일도 일어나지 않는 점
+근처에서 보는 것이다.
+
+\begin{definition}[평형점]\label{def:eq}
+$f(z^{*},u^{*}) = 0$을 만족하는 쌍 $(z^{*},u^{*})$을 \emph{평형점}이라 한다.
+입력을 상수 $u^{*}$로 고정하고 $z(0)=z^{*}$에서 출발하면 $\dot z=0$이므로
+$z(t)\equiv z^{*}$가 영원히 유지된다.
+\end{definition}
+이 말이 성립하려면 입력이 \emph{상수}여야 한다는 점에 유의하자. 평형점은 언제나
+``어떤 특정한 상수 입력에 대한'' 평형점이다.
+
+진자에서 $u^{*}=0$이면 $f=0$으로부터 $z_2^{*}=0$이고 $\sin z_1^{*}=0$이므로
+$z_1^{*}=0$(아래로 매달린 상태) 또는 $z_1^{*}=\pi$(위로 선 상태)다. 둘 다
+평형점이지만, 손을 떼고 놔둘 수 있는 것은 하나뿐이다.
+
+\subsection{자코비안}
+$f:\R^{n}\to\R^{n}$에 대해 (잠시 $u$는 숨기고) \emph{자코비안}은 1계 편도함수를
+모두 모은 행렬이다.
+\[
+   \Dop f \;=\;
+   \begin{pmatrix}
+     \dfrac{\partial f_1}{\partial x_1} & \dfrac{\partial f_1}{\partial x_2} & \cdots & \dfrac{\partial f_1}{\partial x_n}\\[10pt]
+     \vdots & \vdots & \ddots & \vdots\\[6pt]
+     \dfrac{\partial f_n}{\partial x_1} & \dfrac{\partial f_n}{\partial x_2} & \cdots & \dfrac{\partial f_n}{\partial x_n}
+   \end{pmatrix}
+   \;\in\;\R^{n\times n}.
+\]
+한 점 근처에서 $f$를 가장 잘 근사하는 선형사상, 즉 도함수의 다변수 판이다.
+
+\subsection{선형화}\label{sec:lin}
+평형점 $(z^{*},u^{*})$ 둘레에서 $f$를 테일러 전개한다.
+\[
+   \dot z = f(z,u)
+   = \underbrace{f(z^{*},u^{*})}_{=\,0}
+   + \underbrace{\left.\frac{\partial f}{\partial z}\right|_{z^{*},u^{*}}}_{=:\,A}
+     \underbrace{(z-z^{*})}_{=:\,x}
+   + \underbrace{\left.\frac{\partial f}{\partial u}\right|_{z^{*},u^{*}}}_{=:\,B}
+     \underbrace{(u-u^{*})}_{=:\,\tilde u}
+   + \cdots
+\]
+상수항이 사라지는 것은 평형점에서 전개했기 때문이다. 평형점이 필요한 이유가
+바로 이것이다. $z^{*}$가 상수이므로 $\dot x=\dot z$이고, 고차항을 버리면
+\begin{equation}\label{eq:linAB}
+   \dot x = A\,x + B\,\tilde u,\qquad
+   A = \Dop_{z}f\bigl|_{z^{*},u^{*}},\qquad
+   B = \Dop_{u}f\bigl|_{z^{*},u^{*}}
+\end{equation}
+가 남는다. 출력도 똑같이 다룬다.
+$w = h(z,u) = h(z^{*},u^{*}) + \Dop_{z}h|_{*}\,x + \Dop_{u}h|_{*}\,\tilde u + \cdots$
+에서 출력 편차를 $y := w - h(z^{*},u^{*})$로 정의하면
+\begin{equation}\label{eq:linCD}
+   y = C\,x + D\,\tilde u,\qquad
+   C = \Dop_{z}h\bigl|_{z^{*},u^{*}},\qquad
+   D = \Dop_{u}h\bigl|_{z^{*},u^{*}}
+\end{equation}
+이다. 결과가 정확히 표준형 \eqref{eq:std}이고, 그래서 선형 시스템용으로 만든
+도구를 비선형 시스템에도 --- 국소적으로 --- 그대로 겨눌 수 있다.
+
+\begin{caution}[변수가 무엇을 뜻하는지]
+$A,B,C,D$는 \emph{상수} 행렬이다. 평형점에서 값을 매긴 자코비안이지 $z$의
+함수가 아니다. 그리고 $x$, $\tilde u$, $y$는 모두 \emph{편차}다.
+$x=z-z^{*}$, $\tilde u=u-u^{*}$, $y=w-h(z^{*},u^{*})$. (입력 편차도 물결표를
+떼고 그냥 $u$로 적는 경우가 흔하다.) 선형화 모델에 편차 대신 절대 입력을 넣으면
+그 뒤가 전부 상수만큼 어긋난다.
+\end{caution}
+
+\begin{example}[진자, 이어서]
+예제~\ref{ex:pend}에 대해
+\[
+   \Dop_{z}f = \begin{bmatrix} 0 & 1\\[4pt]
+     -\dfrac{g}{\ell}\cos z_1 & -\dfrac{b}{m\ell^{2}}\end{bmatrix},
+   \qquad
+   \Dop_{u}f = \begin{bmatrix}0\\[4pt] \dfrac{1}{m\ell^{2}}\end{bmatrix},
+   \qquad
+   x = \begin{bmatrix}z_1\\ z_2\end{bmatrix} - z^{*} .
+\]
+아래쪽 평형점 $z^{*}=(0,0)$, $u^{*}=0$에서는 $\cos z_1^{*}=1$이므로
+\[
+   A = \begin{bmatrix}0&1\\[3pt] -\dfrac{g}{\ell} & -\dfrac{b}{m\ell^{2}}\end{bmatrix},
+   \qquad
+   B = \begin{bmatrix}0\\[3pt] \dfrac{1}{m\ell^{2}}\end{bmatrix},
+   \qquad C=\begin{bmatrix}1&0\end{bmatrix},\qquad D=0 .
+\]
+\end{example}
+
+\begin{example}[진자, 위로 선 평형점]\label{ex:pendup}
+$\Dop_z f$의 $(2,1)$ 성분은 $-\frac{g}{\ell}\cos z_1^{*}$이므로 어디서
+선형화하느냐에 따라 달라진다. 위로 선 평형점 $z^{*}=(\pi,0)$, $u^{*}=0$에서는
+이 성분이 $+g/\ell$이 된다.
+\[
+   A_{\text{up}} = \begin{bmatrix}0&1\\[3pt] \dfrac{g}{\ell} & -\dfrac{b}{m\ell^{2}}\end{bmatrix},
+   \qquad
+   \det(\lambda I-A_{\text{up}}) = \lambda^{2}+\frac{b}{m\ell^{2}}\lambda-\frac{g}{\ell}.
+\]
+이제 특성다항식의 상수항이 음수이므로, $b$가 얼마든 근 하나는 양수다. $b=0$이면
+고윳값은 $\pm\sqrt{g/\ell}$이다. 선형화가 불안정하고, 당연히 그래야 한다. 끝으로
+세워 둔 진자는 넘어진다. 매달린 평형점에서는 같은 다항식이
+$\lambda^{2}+\frac{b}{m\ell^{2}}\lambda+\frac{g}{\ell}$이 되고, 모든 $b>0$에 대해
+근의 실수부가 음수다. 비선형 모델 하나, 평형점 둘, 질적으로 다른 선형 모델 둘.
+선형화를 적을 때 어느 평형점인지를 언제나 밝혀야 하는 이유가 바로 이것이다.
+\end{example}
+
+\subsection{선형 모델이 놓이는 자리}
+선형화한 시스템은 따로 떨어진 물건이 아니라 실제 시스템을 들여다보는 창이다.
+그림~\ref{fig:lin}이 그 장부 정리다. 들어갈 때 $u^{*}$만큼 옮기고, 나올 때
+평형 출력 $h(z^{*},u^{*})$를 빼면 된다.
+
+\begin{figure}[htb]
+\centering
+\begin{tikzpicture}[>=Stealth]
+  \node (sum1) [sumc] {};
+  \node (plant) [draw,align=center,inner sep=6pt,minimum height=13mm,
+                 right=19mm of sum1] {$\dot z = f(z,u)$\\[2pt] $w = h(z,u)$};
+  \node (sum2) [sumc,right=19mm of plant] {};
+  \node (in)  [left=14mm of sum1] {$\tilde u$};
+  \node (out) [right=14mm of sum2] {$y$};
+  \draw[->] (in) -- node[pos=0.62,above,lbl] {$+$} (sum1);
+  \draw[->] (sum1) -- node[above,sig] {$u$} (plant);
+  \draw[->] (plant) -- node[above,sig] {$w$} (sum2);
+  \draw[->] (sum2) -- (out);
+  \draw[->] ($(sum1)+(0,13mm)$) node[above,sig] {$u^{*}$}
+        -- node[pos=0.72,right,lbl] {$+$} (sum1);
+  \draw[->] ($(sum2)+(0,13mm)$) node[above,sig] {$h(z^{*},u^{*})$}
+        -- node[pos=0.72,right,lbl] {$-$} (sum2);
+  \node[below=2.5mm of plant,lbl] {실제 비선형 시스템};
+\end{tikzpicture}
+\caption{선형화 모델 $\dot x=Ax+B\tilde u$, $y=Cx+D\tilde u$는 $\tilde u$가 작을 때
+여기 그려진 사상 $\tilde u\mapsto y$를 근사한다.}
+\label{fig:lin}
+\end{figure}
+
+\subsection{위상평면}
+2계 자율 시스템 $\dot x_1 = f_1(x_1,x_2)$, $\dot x_2 = f_2(x_1,x_2)$에
+대해서는 해의 집합 전체를 한 그림에 담을 수 있다. $(x_1,x_2)$ 평면에 궤적을
+그리는 것이다. 이 그림을 \emph{위상평면}(phase portrait)이라 한다. 시간 정보는
+그림에 나타나지 않지만 나머지는 다 보인다. 평형점은 벡터장이 0이 되는 점이고,
+해의 유일성 때문에 두 궤적은 서로 만나지 않는다. 그림~\ref{fig:phase}는 감쇠
+나선의 예다.
+
+\begin{figure}[htb]
+\centering
+\begin{tikzpicture}[>=Stealth,scale=1.2]
+  \foreach \a in {-2.4,-1.6,...,2.5}{
+    \foreach \bb in {-2.4,-1.6,...,2.5}{
+      \pgfmathsetmacro{\dx}{\bb}
+      \pgfmathsetmacro{\dy}{-\a-0.7*\bb}
+      \pgfmathsetmacro{\nn}{sqrt(\dx*\dx+\dy*\dy)+0.001}
+      \draw[->,gray!50,thin] (\a,\bb) -- ++({0.44*\dx/\nn},{0.44*\dy/\nn});
+    }}
+  \draw[->] (-3.0,0) -- (3.0,0) node[right] {$x_1$};
+  \draw[->] (0,-2.95) -- (0,2.95) node[above] {$x_2$};
+  \foreach \A in {2.4,1.3}{
+    \draw[thick] plot[domain=0:720,samples=100,variable=\t,smooth]
+      ({\A*exp(-0.0065216*\t)*(cos(\t)+0.37364*sin(\t))},
+       {-1.0676*\A*exp(-0.0065216*\t)*sin(\t)});}
+  \foreach \A/\T in {2.4/40, 2.4/180, 1.3/110}{
+    \pgfmathsetmacro{\xa}{\A*exp(-0.0065216*\T)*(cos(\T)+0.37364*sin(\T))}
+    \pgfmathsetmacro{\ya}{-1.0676*\A*exp(-0.0065216*\T)*sin(\T)}
+    \pgfmathsetmacro{\xb}{\A*exp(-0.0065216*(\T+16))*(cos(\T+16)+0.37364*sin(\T+16))}
+    \pgfmathsetmacro{\yb}{-1.0676*\A*exp(-0.0065216*(\T+16))*sin(\T+16)}
+    \draw[->,thick] (\xa,\ya) -- (\xb,\yb);}
+  \foreach \A in {2.4,1.3}{\fill (\A,0) circle (1.7pt);}
+  \node[above right,lbl] at (2.42,0.04) {$x(0)$};
+  \fill (0,0) circle (2.4pt);
+\end{tikzpicture}
+\caption{$\dot x_1=x_2$, $\dot x_2=-x_1-0.7x_2$의 위상평면. 회색 화살표가
+벡터장이고 굵은 두 곡선이 궤적이다. 원점의 검은 점이 평형점이며 두 궤적 모두
+그리로 감겨 들어간다.}
+\label{fig:phase}
+\end{figure}
+
+\emph{선형} 2계 시스템 $\dot x = Ax$에서는 위상평면 전체가 $A$의 두 고윳값
+$\lambda_{1,2}$로 정해지고, 가능한 그림은 몇 가지뿐이다.
+
+\begin{center}\small
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{}lll@{}}
+\toprule
+고윳값 & 위상평면의 모양 & 평형점 근처의 거동\\
+\midrule
+실수, 둘 다 음수          & 안정 노드(node)     & 모든 궤적이 돌지 않고 들어온다\\
+실수, 둘 다 양수          & 불안정 노드   & 모든 궤적이 빠져나간다\\
+실수, 부호가 반대         & 안장점(saddle)          & 한 방향으로 들어와 다른 방향으로 나간다\\
+복소수, $\operatorname{Re}\lambda<0$ & 안정 초점(focus, 나선) & 궤적이 감겨 들어간다\\
+복소수, $\operatorname{Re}\lambda>0$ & 불안정 초점 & 궤적이 감겨 나간다\\
+순허수             & 중심(centre)          & 닫힌 궤도, 들어가지도 나가지도 않는다\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent 고윳값이 실수이면 고유벡터를 따라가는 직선 궤적이 그림의 뼈대다. 해는
+$x(t)=c_1e^{\lambda_1t}v_1+c_2e^{\lambda_2t}v_2$이고, 각 성분이 제 고유벡터를
+따라 커지거나 줄어든다(그림~\ref{fig:portraits}). 복소수 쌍 $\sigma\pm j\omega$이면
+해는 주파수 $\omega$의 회전을 $e^{\sigma t}$ 포락선이 감싼 것이다. 정확히
+\ref{sec:pfe}절의 부분분수 항들이다.
+
+\begin{figure}[htb]
+\centering
+\begin{tikzpicture}[>=Stealth]
+  \foreach \px/\ma/\mb/\mc/\md/\name in {0/-1/0/0/-2.5/안정 노드,
+                                     3.35/1/0/0/-1.5/안장점,
+                                     6.7/-0.35/1/-1/-0.35/안정 초점,
+                                     10.05/0/1/-1/0/중심}{
+    \begin{scope}[xshift=\px cm,scale=0.62]
+      \draw[gray!60] (-2,0) -- (2,0); \draw[gray!60] (0,-2) -- (0,2);
+      \foreach \u in {-1.6,-0.8,...,1.7}{
+        \foreach \w in {-1.6,-0.8,...,1.7}{
+          \pgfmathsetmacro{\dx}{\ma*\u+\mb*\w}
+          \pgfmathsetmacro{\dy}{\mc*\u+\md*\w}
+          \pgfmathsetmacro{\nn}{sqrt(\dx*\dx+\dy*\dy)+0.001}
+          \draw[->,thin] (\u,\w) -- ++({0.34*\dx/\nn},{0.34*\dy/\nn});
+        }}
+      \fill (0,0) circle (2.2pt);
+      \node[lbl] at (0,-2.45) {\name};
+    \end{scope}}
+\end{tikzpicture}
+\caption{표의 선형 위상평면 가운데 넷을 $\dot x=Ax$의 벡터장으로 그린 것.
+안정 노드($A=\operatorname{diag}(-1,-2.5)$), 안장점
+($\operatorname{diag}(1,-1.5)$), 안정 초점(고윳값 $-0.35\pm j$), 중심(고윳값
+$\pm j$).}
+\label{fig:portraits}
+\end{figure}
+
+\begin{remark}[진자로 돌아가서]
+선형화는 비선형 시스템이 각 평형점 \emph{근처}에서 어떤 그림을 보이는지 알려
+준다. 예제~\ref{ex:pend}의 진자에서 매달린 평형점의 특성다항식은
+$\lambda^{2}+\frac{b}{m\ell^{2}}\lambda+\frac g\ell$로, 마찰이 약하면 안정 초점,
+강하면 안정 노드다. 위로 선 평형점은
+$\lambda^{2}+\frac{b}{m\ell^{2}}\lambda-\frac g\ell$이고 그 근은 부호가 반대인
+실수이므로 안장점이다. 비선형 위상평면 하나에 두 그림이 모두 들어 있다.
+$\theta=0$의 나선형 흡인점과 $\theta=\pi$의 안장점이, 둘 모두에서 먼 곳에서
+이어 붙어 있다.
+\end{remark}
+
+%% ================================================================ 제3부
+\partdivider{제3부 --- 전달함수}
+
+\lecturebreak{제4강}{2026년 9월 14일}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{라플라스 변환과 전달함수}
+
+\subsection{라플라스 변환: 필요한 만큼만}
+신호 $f(t)$의 (단측) 라플라스 변환은
+\begin{equation}\label{eq:laplace}
+   F(s) = \Lap\{f\}(s) = \int_{0^{-}}^{\infty} f(t)\,e^{-st}\,\d t ,
+   \qquad s\in\mathbb{C}
+\end{equation}
+이다. 적분 하한을 $0^{-}$로 적는 이유는, 원점에 놓인 임펄스와 초기 상태까지
+세기 위해 $t=0$ \emph{이전}부터 적분을 시작하기 때문이다.
+
+\smallskip
+\begin{center}
+\renewcommand{\arraystretch}{2.0}
+\begin{tabular}{@{}l@{\qquad\qquad}l@{\qquad\qquad}l@{}}
+\toprule
+$\delta(t) \;\mapsto\; 1$
+  & $u_{s}(t) \;\mapsto\; \dfrac{1}{s}$
+  & $t\,u_{s}(t) \;\mapsto\; \dfrac{1}{s^{2}}$\\[6pt]
+$t^{n}u_{s}(t) \;\mapsto\; \dfrac{n!}{s^{\,n+1}}$
+  & $e^{-\alpha t} \;\mapsto\; \dfrac{1}{s+\alpha}$
+  & $f(t-a)\,u_{s}(t-a) \;\mapsto\; e^{-as}F(s)$\\[6pt]
+$\sin\omega t \;\mapsto\; \dfrac{\omega}{s^{2}+\omega^{2}}$
+  & $\cos\omega t \;\mapsto\; \dfrac{s}{s^{2}+\omega^{2}}$
+  & $f*g \;\mapsto\; F(s)\,G(s)$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\smallskip\noindent
+여기서 $u_{s}$는 단위계단함수다. 변환 쌍은 도구의 절반일 뿐이다. 나머지 절반은
+변환이 대수로 바꿔 주는 \emph{연산}의 목록이다.
+
+\begin{center}\small
+\renewcommand{\arraystretch}{1.55}
+\begin{tabular}{@{}lll@{}}
+\toprule
+& 시간 영역 & $s$ 영역\\
+\midrule
+선형성        & $a f(t)+b g(t)$            & $aF(s)+bG(s)$\\
+미분  & $\dot f(t)$                & $sF(s)-f(0^{-})$\\
+적분      & $\int_{0}^{t} f(\tau)\,\d\tau$ & $F(s)/s$\\
+시간 이동       & $f(t-a)\,u_s(t-a)$, $a>0$  & $e^{-as}F(s)$\\
+주파수 이동  & $e^{-\alpha t}f(t)$        & $F(s+\alpha)$\\
+$t$ 곱하기 & $t\,f(t)$             & $-F'(s)$\\
+합성곱      & $(f*g)(t)=\int_0^t f(\tau)g(t-\tau)\,\d\tau$ & $F(s)\,G(s)$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+이 가운데 실제로 일을 하는 것은 미분 규칙이다.
+\begin{equation}\label{eq:diffrule}
+   \Lap\{\dot f\} = sF(s) - f(0),
+   \qquad
+   \Lap\{\ddot f\} = s^{2}F(s) - s f(0) - \dot f(0).
+\end{equation}
+외울 것은 그 결론 한 줄이다. \emph{초기조건이 모두 0이면 미분이 $s$ 곱하기로
+바뀐다.} 그리고 적분 규칙에 따라 적분은 $s$ 나누기로 바뀐다. 이 사실 하나가
+선형 미분방정식을 대수 방정식으로 바꾸고, 전달함수가 존재하는 이유 전부가
+여기에 있다.
+
+\begin{remark}[표 읽기]
+두 줄은 그림으로 볼 만하다. 주파수 이동은 신호를 $e^{-\alpha t}$로 감쇠시키면
+그 변환이 $s$-평면에서 왼쪽으로 $\alpha$만큼 미끄러진다는 뜻이다.
+$\sin\omega t$의 극점은 $\pm j\omega$에 있고, $e^{-\alpha t}\sin\omega t$의
+극점은 $-\alpha\pm j\omega$에 있다. 시간 이동은 $a$초의 순수한 지연이
+$e^{-as}$를 곱한다는 뜻이다. 이 인수는 다항식의 비가 아니고, 그래서 지연은
+유리 전달함수 위에 세운 모든 것과 잘 어울리지 않는다.
+\end{remark}
+
+\subsection{초기값과 최종값}\label{sec:fvt}
+극한 두 개만 있으면 신호를 역변환하지 않고도 변환에서 곧바로 그 시작과 끝을
+읽을 수 있다.
+
+\begin{proposition}[초기값 정리와 최종값 정리]\label{prop:fvt}
+$f$의 라플라스 변환을 $F$라 하자.
+\begin{enumerate}[label=(\roman*),itemsep=2pt]
+\item $F$가 strictly proper이면 $f(0^{+}) = \lim_{s\to\infty} sF(s)$이다.
+\item $sF(s)$의 모든 극점의 실수부가 음수이면 $t\to\infty$일 때 $f(t)$의 극한이
+존재하고
+\[
+   \lim_{t\to\infty} f(t) = \lim_{s\to 0} sF(s)
+\]
+이다.
+\end{enumerate}
+\end{proposition}
+
+둘 다 미분 규칙에서 나온다. $\int_{0}^{\infty}\dot f(t)e^{-st}\,\d t
+= sF(s)-f(0)$에서 $s\to0$으로 보내면(적분이 $f(\infty)-f(0)$이 된다), 또는
+$s\to\infty$로 보내면(적분이 사라진다) 두 명제가 나온다.
+
+\begin{caution}[최종값 정리의 가정]
+극점에 대한 조건은 장식이 아니다. $F(s)=1/(s-1)$이면 공식은
+$\lim_{s\to0}sF(s)=0$을 주지만 $f(t)=e^{t}$는 한없이 커진다. 마찬가지로
+$F(s)=\omega/(s^{2}+\omega^{2})$도 $0$을 주지만 $\sin\omega t$에는 극한 자체가
+없다. 이 정리는 존재하는 최종값을 알려 줄 뿐, 최종값이 존재하는지는 판정하지
+못한다. 그 질문에 답하는 것은 극점이고, 그것이 안정도의 주제다.
+\end{caution}
+
+\begin{example}[붙들린 물체의 정상 오차]
+1.3절의 되먹임 법칙은 \eqref{eq:massfb},
+$m\ddot y+c\dot y+k(y-h)=(\hat m-m)g$를 낳았다. $e=y-h$로 두자. $e(0)=\dot e(0)=0$이고
+우변이 상수 $d=(\hat m-m)g$이므로
+\[
+   E(s) = \frac{d}{s\,(ms^{2}+cs+k)} ,
+   \qquad
+   \lim_{t\to\infty} e(t) = \lim_{s\to0} sE(s) = \frac{d}{k}
+\]
+이다. $sE(s)$의 극점은 $ms^{2}+cs+k$의 근이고 $c,k>0$이면 좌반평면에 있으므로
+정리를 쓸 수 있다. 미분방정식을 풀지 않고도 \eqref{eq:offset}이 그대로 다시
+나온다.
+\end{example}
+
+\subsection{전달함수}
+\begin{definition}[전달함수]\label{def:tf}
+입력 $u(t)$, 출력 $y(t)$인 선형 시불변(LTI) 시스템이 \emph{정지 상태에서
+출발}(initially at rest, 모든 초기조건이 0)할 때, \emph{전달함수}는
+\[
+   P(s) \;=\; \frac{\Lap\{y(t)\}}{\Lap\{u(t)\}} \;=\; \frac{Y(s)}{U(s)}
+\]
+이다.
+\end{definition}
+
+\begin{figure}[htb]
+\centering
+\begin{tikzpicture}[>=Stealth]
+  \node (b) [draw,minimum width=24mm,minimum height=12mm] {$P(s)$};
+  \draw[->,thick] ($(b.west)+(-24mm,0)$) node[left] {$u(t)$}
+        -- node[above,sig] {$U(s)$} (b.west);
+  \draw[->,thick] (b.east)
+        -- node[above,sig] {$Y(s)$} ($(b.east)+(24mm,0)$) node[right] {$y(t)$};
+\end{tikzpicture}
+\caption{블록으로 본 전달함수. 시스템이 정지 상태에서 출발할 때
+$Y(s)=P(s)U(s)$가 성립한다.}
+\label{fig:tfblock}
+\end{figure}
+
+같은 말로, $P(s)$는 임펄스 응답의 라플라스 변환이다. $u=\delta$를 넣으면
+$U\equiv1$이므로 $Y=P$가 되기 때문이다. 신호가 여럿 등장할 때는 이것을
+$T_{uy}(s)$로 적어 어느 신호가 입력이고 어느 것이 출력인지 표시하기도 한다.
+단일입력 단일출력이면 그냥 $P(s)$로 써도 헷갈릴 일이 없다.
+
+\begin{remark}[``정지 상태에서 출발''이 왜 사소하지 않은가]
+이 가정이 없으면 변환된 식에 초기조건에서 오는 $-sy(0)-\dot y(0)-\cdots$ 항이
+남고, 그러면 $Y(s)/U(s)$는 시스템만이 아니라 ``시스템이 어떻게 출발했는지''에도
+의존하게 된다. 플랜트의 성질이 아니게 되므로 그것을 시스템의 전달\emph{함수}라고
+부를 수 없다.
+\end{remark}
+
+\begin{example}\label{ex:tf}
+$\ddot y + 3\dot y + y = 2\dot u + u$를 보자. 영초기조건에서 변환하면
+$s^{2}Y+3sY+Y = 2sU+U$이므로 $P(s) = (2s+1)/(s^{2}+3s+1)$이다.
+\end{example}
+요령은 예제에 그대로 보인다.
+$a_n y^{(n)}+\cdots+a_1\dot y+a_0y = b_m u^{(m)}+\cdots+b_1\dot u+b_0u$에서
+$\d/\d t$를 전부 $s$로 바꾸고 $Y/U$에 대해 풀면
+\[
+   P(s) = \frac{b_ms^{m}+\cdots+b_1s+b_0}{a_ns^{n}+\cdots+a_1s+a_0}
+\]
+이다. 분모의 차수가 시스템의 차수다.
+
+\subsection{예제: two-cart 시스템 (이상화)}\label{sec:twocarttf}
+Two-cart 시스템에서 마찰과 결합 댐퍼를 뺀($c=b=0$) 경우를 보자.
+\begin{equation}\label{eq:twocartideal}
+   m_1\ddot p_1 = k\,(p_2-p_1) + u,\qquad
+   m_2\ddot p_2 = k\,(p_1-p_2),\qquad y=p_2 .
+\end{equation}
+영초기조건에서 변환하고 $Y=P_2$로 쓰면
+\[
+   m_1 s^{2}P_1 = kY - kP_1 + U,\qquad
+   m_2 s^{2}Y = kP_1 - kY
+\]
+이다. 두 번째 식에서 $P_1 = \dfrac{m_2s^{2}+k}{k}\,Y$이므로, 이것을 첫 번째 식
+$(m_1s^{2}+k)P_1 = kY+U$에 넣으면
+\[
+   \frac{(m_1s^{2}+k)(m_2s^{2}+k)}{k}\,Y = kY + U
+   \quad\Longrightarrow\quad
+   \Bigl[(m_1s^{2}+k)(m_2s^{2}+k) - k^{2}\Bigr]Y = k\,U
+\]
+가 된다. $(m_1s^{2}+k)(m_2s^{2}+k)-k^{2} = s^{2}\bigl(m_1m_2s^{2}+k(m_1+m_2)\bigr)$
+이므로
+\begin{equation}\label{eq:twocartP}
+   \boxed{\;
+   \frac{Y(s)}{U(s)} \;=\; \frac{k}{\,s^{2}\bigl(m_1m_2\,s^{2}+k(m_1+m_2)\bigr)\,}\;}
+\end{equation}
+이다.
+
+\begin{remark}[\eqref{eq:twocartP}을 읽는 법]
+분모의 $s^{2}$은 자유 강체 모드다. 마찰이 없으니 두 수레를 지면에 붙들어 두는
+것이 아무것도 없고, 알짜 충격량이 들어가면 둘은 영원히 미끄러져 간다. 남은 인수는
+$s = \pm j\sqrt{k(m_1+m_2)/(m_1m_2)}$에서 0이 되는데, 이것이 두 수레가 서로에
+대해 진동하는 주파수다. 둘 다 허수축 위에 있다. $c=b=0$이면 감쇠시키는 것이
+없기 때문이고, 2절의 모델이 $c$와 $b$를 남겨 둔 이유가 바로 이것이다.
+\end{remark}
+
+\begin{caution}[two-cart 모델이 두 개다]
+\eqref{eq:twocartideal}은 \eqref{eq:eom}이 \emph{아니다}. 계산을 읽을 만하게
+하려고 마찰 $c$와 댐퍼 $b$를 뺀 것이다. 두 모델에서 나온 결과를 섞어 쓰면 안
+된다. $c>0$이면 \eqref{eq:twocartP}의 $s^{2}$ 인수가 $s(\,\cdot\,)$이 되어,
+극점 하나가 원점을 떠나고 자유 적분기는 하나만 남는다.
+\end{caution}
+
+\begin{remark}[$c$와 $b$를 남긴 채 같은 계산을 하면]\label{rem:fullTF}
+전체 모델 \eqref{eq:eom}을 그대로 끌고 가면 행렬 꼴로
+\[
+   \begin{bmatrix}
+     m_1s^{2}+(b+c)s+k & -(bs+k)\\[3pt]
+     -(bs+k) & m_2s^{2}+(b+c)s+k
+   \end{bmatrix}
+   \begin{bmatrix}P_1\\[3pt] P_2\end{bmatrix}
+   = \begin{bmatrix}U\\[3pt] 0\end{bmatrix}
+\]
+이 되고,
+$\Delta(s) = \bigl[m_1s^{2}+(b+c)s+k\bigr]\bigl[m_2s^{2}+(b+c)s+k\bigr]-(bs+k)^{2}$
+로 두면 $Y(s)/U(s) = (bs+k)/\Delta(s)$다. $b=c=0$을 넣으면 \eqref{eq:twocartP}이
+정확히 복원되므로, 양쪽을 서로 검산해 주는 셈이다. 눈여겨볼 것이 둘 있다. 결합
+댐퍼는 $s=-k/b$에 유한 영점을 만든다. 즉 분자는 $bs+k$이지 결코 $0$이 아니다.
+그리고 $c=0$이면서 $b>0$이면
+$\Delta(s)=s^{2}\bigl[m_1m_2s^{2}+(m_1+m_2)bs+(m_1+m_2)k\bigr]$로 원점의 이중극점이
+살아남는다. 그 극점은 댐퍼가 없어서가 아니라 \emph{지면} 마찰이 없어서 생기는
+것이기 때문이다.
+\end{remark}
+
+\subsection{상태공간에서 전달함수로}\label{sec:ss2tf}
+그림~\ref{fig:routes}의 두 표현형은 계산 한 번으로 연결된다. $x(0)=0$인
+\eqref{eq:std}에서 출발해 변환하면 $s\,X(s) = A\,X(s) + B\,U(s)$이다. $X$ 항을
+모으면 $(sI-A)X(s) = B\,U(s)$이고, 역행렬을 취하면
+$X(s) = (sI-A)^{-1}B\,U(s)$이다. 이것을 $Y = CX + DU$에 넣으면
+\begin{equation}\label{eq:ss2tf}
+   \boxed{\;Y(s) = \bigl[\,C\,(sI-A)^{-1}B + D\,\bigr]\,U(s),
+   \qquad P(s) = C(sI-A)^{-1}B + D. \;}
+\end{equation}
+SISO 시스템이면 이것은 $s$에 대한 스칼라 유리함수이고, 일반적으로는 유리함수를
+성분으로 갖는 $p\times m$ 행렬이다.
+
+\begin{remark}[$x(0)$을 남겨 두면]
+초기조건을 0으로 두지 않고 한 번 계산해 보면, 영초기조건 가정이 정확히 무엇을
+사 주는지가 드러난다. $\dot x = Ax+Bu$를 그대로 변환하면
+$sX(s)-x(0) = AX(s)+BU(s)$, 즉 $(sI-A)X(s) = x(0) + BU(s)$이므로
+\[
+   Y(s) = \underbrace{C(sI-A)^{-1}x(0)}_{\text{초기값에 의한 응답}}
+        + \underbrace{\bigl[C(sI-A)^{-1}B+D\bigr]U(s)}_{\text{입력에 의한 응답}}
+\]
+가 된다. 전달함수는 두 번째 항만을 가리킨다. 첫 번째 항이 현실에서 사라지는
+것이 아니라, 정의에서 떼어낸 것일 뿐이다. 정의~\ref{def:tf}가 ``정지 상태에서
+출발''을 명시해야 하는 이유가 이것이다.
+\end{remark}
+
+\begin{remark}
+$(sI-A)^{-1} = \operatorname{adj}(sI-A)/\det(sI-A)$이므로
+$P(s) = C\,\operatorname{adj}(sI-A)\,B/\det(sI-A) + D$로도 쓸 수 있고, 따라서
+$P(s)$의 모든 극점은 $A$의 고윳값이다. 역은 성립하지 않는다. 약분되어 사라질 수
+있기 때문이다. 즉 상태공간 모델은 전달함수가 담지 못하는 정보를 가질 수 있고,
+이 과목이 전달함수만 쓰지 않는 이유 중 하나가 그것이다. 반대 방향, 즉 $P(s)$에서
+사중쌍 $(A,B,C,D)$을 만드는 것은 \emph{실현}(realization)이라 부른다. $P$가
+proper이면 언제나 가능하지만 답이 전혀 유일하지 않다. 그림~\ref{fig:routes}에서
+두 상자 사이 화살표가 양방향인 이유다.
+\end{remark}
+
+\begin{example}[실현, 한 단계씩]\label{ex:realization}
+$P(s)=\dfrac{s^{2}+s+2}{s^{3}+3s^{2}+2s-1}$을 실현해 보자. 중간 신호 $\bar y$를
+두어 둘로 나눈다.
+\[
+   U \;\longrightarrow\; \boxed{\dfrac{1}{s^{3}+3s^{2}+2s-1}} \;\longrightarrow\;
+   \bar Y \;\longrightarrow\; \boxed{s^{2}+s+2} \;\longrightarrow\; Y .
+\]
+첫 블록은 미분방정식 $\dddot{\bar y}+3\ddot{\bar y}+2\dot{\bar y}-\bar y=u$이고
+입력의 미분이 없으므로, 3.1절처럼 $x_1=\bar y$, $x_2=\dot{\bar y}$,
+$x_3=\ddot{\bar y}$로 고르면
+\[
+   \dot x_1=x_2,\qquad \dot x_2=x_3,\qquad \dot x_3 = x_1-2x_2-3x_3+u
+\]
+가 된다. 두 번째 블록은 $\bar y$를 미분하는 것뿐이고, 필요한 미분은 이미 모두
+상태다. $y=\ddot{\bar y}+\dot{\bar y}+2\bar y = 2x_1+x_2+x_3$. 따라서
+\[
+   A=\begin{bmatrix}0&1&0\\0&0&1\\1&-2&-3\end{bmatrix},\qquad
+   B=\begin{bmatrix}0\\0\\1\end{bmatrix},\qquad
+   C=\begin{bmatrix}2&1&1\end{bmatrix},\qquad D=0 .
+\]
+이 규칙은 일반적이다. 분모의 계수가 (부호가 뒤집혀) $A$의 마지막 행을 채우고,
+분자의 계수가 $C$가 된다. 검산하면
+$(sI-A)^{-1}B=(1,\;s,\;s^{2})\tp/(s^{3}+3s^{2}+2s-1)$이고, 여기에 $C$를 곱하면
+$P(s)$다.
+\end{example}
+
+%% ------------------------------------------------------------------ 제5강
+\lecturebreak{제5강}{2026년 9월 16일}
+
+\subsection{극점, 영점, properness}\label{sec:polezero}
+앞으로 만날 전달함수는 모두 다항식의 비, 즉
+\begin{equation}\label{eq:rational}
+   G(s) = \frac{b_ms^{m}+\cdots+b_1s+b_0}
+               {s^{n}+a_{n-1}s^{n-1}+\cdots+a_1s+a_0}
+\end{equation}
+꼴의 \emph{유리}(rational) 전달함수다. 분모의 차수 $n$을 $G$의 \emph{차수}라
+하고, $n-m$을 \emph{상대차수}(relative degree)라 한다. $n$과 $m$을 견주면 이름이
+넷 나온다.
+
+\begin{center}\small
+\begin{tabular}{@{}ll@{}}
+\toprule
+$n \ge m$ & proper\\
+$n > m$   & strictly proper\\
+$n = m$   & biproper\\
+$n < m$   & improper\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{remark}[improper 가 왜 반갑지 않은가]
+improper 하다는 것은 출력 쪽 미분 횟수보다 입력 쪽 미분 횟수가 많다는 뜻이고,
+그것을 실제로 구현하려면 입력을 \emph{미분}해야 한다. 순수 미분기는
+$|j\omega|=\omega$이므로 주파수가 올라갈수록 이득이 한없이 커진다. 정작 없애고
+싶은 고주파 측정잡음을 그만큼 증폭한다는 뜻이다. 실제 플랜트는 strictly proper
+인데, 이는 즉각적으로 반응하는 것은 없다는 말과 같다. 우리가 직접 만드는
+제어기도 같은 이유로 적어도 proper로 유지한다.
+\end{remark}
+
+분자와 분모를 인수분해하면
+\begin{equation}\label{eq:factored}
+   G(s) = \frac{N(s)}{D(s)}
+        = k\,\frac{\prod_{i=1}^{m}(s-z_i)}{\prod_{i=1}^{n}(s-p_i)}
+\end{equation}
+이고 $N$, $D$는 실계수 다항식이다. $D(s)=0$이 되는 $s\in\mathbb{C}$가
+\textbf{극점}(pole)으로 $n$개, $N(s)=0$이 되는 $s$가 \textbf{영점}(zero)으로
+$m$개다. $N$과 $D$의 계수가 \emph{실수}이므로, 실수가 아닌 극점과 영점은 반드시
+켤레복소수와 짝을 이루어 함께 나타난다. 이들을 복소평면에 극점은 $\times$,
+영점은 $\circ$로 찍은 것이 \emph{pole--zero map}이다(그림~\ref{fig:pzmap}).
+
+\begin{figure}[htb]
+\centering
+\begin{tikzpicture}[>=Stealth,scale=0.95,
+   polex/.pic={\draw[thick] (-0.13,-0.13)--(0.13,0.13) (-0.13,0.13)--(0.13,-0.13);}]
+  \draw[->] (-3.5,0) -- (1.7,0) node[right] {$\operatorname{Re}s$};
+  \draw[->] (0,-2.1) -- (0,2.2) node[above] {$\operatorname{Im}s$};
+  \pic at (-2.7,0) {polex};
+  \pic at (-1.15,1.35) {polex};
+  \pic at (-1.15,-1.35) {polex};
+  \draw[thick] (-0.40,0.75) circle (0.14);
+  \draw[thick] (-0.40,-0.75) circle (0.14);
+  \draw[dashed,gray] (-1.15,1.35) -- (-1.15,-1.35);
+  \draw[dashed,gray] (-0.40,0.75) -- (-0.40,-0.75);
+  \node[anchor=west,lbl] at (0.30,1.80) {$\times$ 극점 \qquad $\circ$ 영점};
+\end{tikzpicture}
+\caption{Pole--zero map. $N$과 $D$의 계수가 실수이므로 실수가 아닌 극점과 영점은
+실축에 대해 대칭인 짝과 함께 나타난다(점선). 실수인 것은 혼자 선다.}
+\label{fig:pzmap}
+\end{figure}
+
+\subsection{부분분수로 역변환하기}\label{sec:pfe}
+$Y(s)$에서 $y(t)$로 돌아갈 때 역변환 적분을 직접 계산하는 일은 거의 없다. 대신
+유리함수 $Y(s)$를 간단한 항들의 합으로 쪼개는데, 각 항이 변환 쌍 표의 한 줄이다.
+$Y$가 strictly proper이고 극점이 $p_i$이면 항은 세 종류다.
+
+\smallskip\noindent\textbf{서로 다른 실수 극점.} 단순 극점 $p_i$ 하나가
+$A_i/(s-p_i)$를 내놓고, 그 계수는 \emph{가림 규칙}(cover-up rule)으로 구한다.
+$(s-p_i)$를 곱하고 $s=p_i$를 넣으면 된다.
+\begin{equation}\label{eq:coverup}
+   A_i = \bigl[(s-p_i)\,Y(s)\bigr]_{s=p_i} .
+\end{equation}
+이런 항은 각각 $A_i e^{p_i t}$로 역변환된다.
+
+\smallskip\noindent\textbf{중복 극점.} 중복도 $r$인 극점은 항 $r$개,
+$B_1/(s-p)+B_2/(s-p)^{2}+\dots+B_r/(s-p)^{r}$를 내놓는다. 맨 위 계수 $B_r$은
+$(s-p)^{r}$로 가림 규칙을 써서 구하고, 아래 계수들은 미분해서 구한다.
+$B_{r-k} = \frac{1}{k!}\frac{\d^{k}}{\d s^{k}}
+\bigl[(s-p)^{r}Y(s)\bigr]_{s=p}$. 항 $B/(s-p)^{j}$는
+$B\,t^{j-1}e^{pt}/(j-1)!$로 역변환된다. 중복 극점은 지수함수 앞에 $t$의 다항식을
+붙인다.
+
+\smallskip\noindent\textbf{복소수 쌍.} 극점 $-\alpha\pm j\omega$는 한데 묶어
+실수 2차식 $(s+\alpha)^{2}+\omega^{2}$ 하나로 두고, 분자는 1차식으로 둔다. 이를
+표의 이동된 두 쌍으로 맞춰 쓰면
+\[
+   \frac{C(s+\alpha)+D\omega}{(s+\alpha)^{2}+\omega^{2}}
+   \;\longmapsto\;
+   e^{-\alpha t}\bigl(C\cos\omega t + D\sin\omega t\bigr)
+\]
+로, ($\alpha>0$이면) 감쇠하는 진동이 나온다. 극점의 실수부가 포락선을, 허수부가
+주파수를 정한다.
+
+\begin{example}[세 경우]\label{ex:pfe}
+\begin{enumerate}[label=(\alph*),itemsep=3pt,leftmargin=*]
+\item $Y(s)=\dfrac{s+5}{(s+1)(s+2)}=\dfrac{A}{s+1}+\dfrac{B}{s+2}$. 가림 규칙으로
+$A=\frac{s+5}{s+2}\big|_{s=-1}=4$, $B=\frac{s+5}{s+1}\big|_{s=-2}=-3$이므로
+$y(t)=4e^{-t}-3e^{-2t}$.
+\item $Y(s)=\dfrac{1}{s(s+1)^{2}}=\dfrac{A}{s}+\dfrac{B_1}{s+1}+\dfrac{B_2}{(s+1)^{2}}$.
+가림 규칙으로 $A=1$, $B_2=\frac1s\big|_{s=-1}=-1$이고, 미분하면
+$B_1=\frac{\d}{\d s}\frac1s\big|_{s=-1}=-1$이다. 따라서
+$y(t)=1-e^{-t}-t\,e^{-t}$.
+\item $Y(s)=\dfrac{1}{s^{2}+2s+5}=\dfrac{1}{(s+1)^{2}+2^{2}}
+=\dfrac12\cdot\dfrac{2}{(s+1)^{2}+2^{2}}$이므로 $y(t)=\tfrac12e^{-t}\sin 2t$.
+\end{enumerate}
+(b)에서는 \ref{sec:fvt}절의 두 정리로 답을 검산할 수 있다.
+$\lim_{s\to\infty}sY(s)=0=y(0^{+})$이고 $\lim_{s\to0}sY(s)=1=y(\infty)$이다.
+\end{example}
+
+\subsection{출력의 극점은 어디서 오는가}\label{sec:outputpoles}
+플랜트를 손에 넣었으면 입력에 대한 응답은 $y(t) = \Lap^{-1}\{G(s)\,U(s)\}$이고,
+이 역변환을 읽는 방법은 부분분수로 쪼개는 것이다. 예컨대
+\begin{equation}\label{eq:pfe}
+   Y(s) = \frac{A}{s-1} + \frac{B}{s-2} + \frac{C}{s+3}
+        + \frac{Ds+E}{s^{2}+\omega^{2}}
+\end{equation}
+처럼 나왔다고 하자. 앞의 세 분모는 \emph{플랜트}의 극점이고, 마지막 하나는
+\emph{입력}의 극점이다. 입력이 $\sin\omega t$였다면 정확히 저 인수가 붙는다. 항별로
+역변환하면 극점 하나당 시간함수 하나가 나오므로,
+\begin{center}
+\emph{출력의 극점은 플랜트의 극점과 입력의 극점을 합한 것이다.}
+\end{center}
+플랜트 자신의 극점은 무엇으로 구동하든 반드시 나타난다. 그 극점이 제자리에
+있는지를 따지는 일이 입력과 무관하게 플랜트만의 문제인 이유가 이것이다.
+
+\subsection{블록선도와 되먹임 루프}\label{sec:blocks}
+$Y(s)=P(s)U(s)$가 그냥 곱셈이므로, 서로 연결된 시스템은 대수로 합쳐진다. 거의
+모든 블록선도는 세 가지 연결로 설명된다(그림~\ref{fig:blocks}).
+\begin{equation}\label{eq:blockalg}
+   \underbrace{\;Q(s)P(s)\;}_{\text{직렬}},
+   \qquad
+   \underbrace{\;P(s)+Q(s)\;}_{\text{병렬}},
+   \qquad
+   \underbrace{\;\frac{G(s)}{1+G(s)H(s)}\;}_{\text{음의 되먹임}} .
+\end{equation}
+앞의 둘은 바로 보인다. 중요한 것은 세 번째이고, 한 번은 유도해 둘 만하다.
+그림~\ref{fig:blocks}(c)의 루프에서 오차는 $E=R-HY$, 출력은 $Y=GE$이므로
+$Y=G(R-HY)$다. 출력이 양변에 나타나는데, 이것이 되먹임이 대수에 남긴 흔적이다.
+정리하면 $(1+GH)Y=GR$이고 공식이 나온다.
+
+2절의 운동방정식과 비교했을 때 무엇을 얻고 무엇을 잃는지 짚어 둘 만하다.
+블록선도에서는 시스템을 \emph{연결}하는 일이 사소하다. 곱하거나 더하거나
+\eqref{eq:blockalg}를 쓰면 된다. 대신 물리가 가려진다. $P(s)$라고 적힌 블록은
+그 안에 어떤 질량과 스프링과 댐퍼가 있는지 더는 말해 주지 않는다. 미분방정식은
+그 반대다. 모든 항에 물리적 의미가 있지만, 두 시스템을 연결하려면 식을 다시
+써야 한다. 둘을 나란히 쓰는 이유가 이것이다.
+
+\begin{figure}[htb]
+\centering
+\begin{tikzpicture}[>=Stealth,node distance=9mm]
+  % (a) series
+  \node[lbl] (la) at (-1.1,0) {(a)};
+  \node (ua) at (0,0) {$U$};
+  \node[draw,minimum width=10mm,minimum height=7mm] (pa) at (1.5,0) {$P$};
+  \node[draw,minimum width=10mm,minimum height=7mm] (qa) at (3.2,0) {$Q$};
+  \node (ya) at (4.7,0) {$Y$};
+  \draw[->] (ua) -- (pa); \draw[->] (pa) -- (qa); \draw[->] (qa) -- (ya);
+  % (b) parallel
+  \node[lbl] at (6.0,0) {(b)};
+  \node (ub) at (6.8,0) {$U$};
+  \coordinate (sb) at (7.4,0);
+  \node[draw,minimum width=10mm,minimum height=7mm] (pb) at (8.6,0.55) {$P$};
+  \node[draw,minimum width=10mm,minimum height=7mm] (qb) at (8.6,-0.55) {$Q$};
+  \node[sumc] (jb) at (9.9,0) {};
+  \node (yb) at (10.9,0) {$Y$};
+  \draw (ub) -- (sb); \fill (sb) circle (1.2pt);
+  \draw[->] (sb) |- (pb); \draw[->] (sb) |- (qb);
+  \draw[->] (pb) -| node[pos=0.8,right,lbl] {$+$} (jb);
+  \draw[->] (qb) -| node[pos=0.8,right,lbl] {$+$} (jb);
+  \draw[->] (jb) -- (yb);
+  % (c) feedback
+  \node[lbl] at (1.2,-2.2) {(c)};
+  \node (rc) at (2.0,-2.2) {$R$};
+  \node[sumc] (sc) at (3.1,-2.2) {};
+  \node[draw,minimum width=10mm,minimum height=7mm] (gc) at (4.9,-2.2) {$G$};
+  \coordinate (tc) at (6.5,-2.2);
+  \node (yc) at (7.4,-2.2) {$Y$};
+  \node[draw,minimum width=10mm,minimum height=7mm] (hc) at (4.9,-3.3) {$H$};
+  \draw[->] (rc) -- node[pos=0.75,above,lbl] {$+$} (sc);
+  \draw[->] (sc) -- node[above,sig] {$E$} (gc);
+  \draw[->] (gc) -- (yc);
+  \fill (tc) circle (1.2pt);
+  \draw[->] (tc) |- (hc);
+  \draw[->] (hc) -| node[pos=0.85,left,lbl] {$-$} (sc);
+\end{tikzpicture}
+\caption{(a) 직렬: $Y=QPU$. (b) 병렬: $Y=(P+Q)U$. (c) 음의 되먹임:
+$Y=\frac{G}{1+GH}R$.}
+\label{fig:blocks}
+\end{figure}
+
+표준적인 제어 루프에서 앞먹임 경로는 제어기 다음에 플랜트가 오는 $G=P(s)C(s)$이고,
+출력은 그대로 되먹여진다($H=1$). 기준입력 $r$은 $y$가 되었으면 하는 값이고,
+제어기는 오차 $e=r-y$에 작용한다.
+\begin{equation}\label{eq:closedloop}
+   \frac{Y(s)}{R(s)} = \frac{P(s)C(s)}{1+P(s)C(s)},
+   \qquad
+   \frac{E(s)}{R(s)} = \frac{1}{1+P(s)C(s)} .
+\end{equation}
+
+\begin{definition}[루프 전달함수]\label{def:loop}
+루프를 한 바퀴 돌며 만나는 블록을 모두 곱한 것
+\[
+   L(s) = P(s)\,C(s)
+\]
+(일반적으로는 $G(s)H(s)$)를 \emph{루프 전달함수}(loop transfer function)라 한다.
+\emph{루프 이득}(loop gain) 또는 \emph{개루프} 전달함수라고도 부른다. 방정식
+\begin{equation}\label{eq:chareq}
+   1+L(s)=0
+\end{equation}
+을 폐루프의 \emph{특성방정식}(characteristic equation)이라 한다.
+\end{definition}
+
+\eqref{eq:closedloop}의 폐루프 전달함수는 모두 분모가 $1+L$로 같다. $L=N_L/D_L$을
+다항식의 비로 쓰면
+\[
+   \frac{L}{1+L} = \frac{N_L}{D_L+N_L}
+\]
+이므로 폐루프 극점은 $D_L+N_L$의 근, 즉 \eqref{eq:chareq}의 근이다.
+\emph{되먹임이 극점을 옮긴다}는 말의 정확한 뜻이 이것이다. 플랜트 혼자서는
+$D_L$의 근을 극점으로 갖는데, 루프를 닫으면 그것이 $D_L+N_L$의 근으로 바뀌고,
+그 차이를 조절하는 손잡이가 제어기 $C$다.
+
+\begin{example}[붙들린 물체, 루프로 보기]\label{ex:massloop}
+1.3절로 돌아가 모든 것을 목표 높이에서 재자. $e=h-y$. 힘에서 높이로 가는
+플랜트는 $P(s)=1/(ms^{2})$이고, 되먹임 법칙 \eqref{eq:pd}는 중력을 보상하는
+상수를 빼면 제어기 $C(s)=k+cs$다. 그러면
+\[
+   L(s) = \frac{k+cs}{ms^{2}},
+   \qquad
+   1+L(s) = \frac{ms^{2}+cs+k}{ms^{2}}
+\]
+이다. 개루프는 원점에 이중극점을 갖는다. 떠내려가는 자유 질량이다. 폐루프의
+극점은 $ms^{2}+cs+k$의 근이고, $c,k>0$이면 좌반평면에 있다. 이득이 자유 질량에는
+없던 \emph{유효 감쇠} $c$와 \emph{유효 강성} $k$가 된 것이고, ``되먹임이
+안정화했다''는 말의 내용은 이것이 전부다.
+\end{example}
+
+\begin{question}
+플랜트 $P$와 제안된 제어기 $C$가 주어졌을 때 폐루프는 안정한가? 한 가지 답은
+$D_L+N_L$의 근을 계산하는 것이다. \ref{sec:nyquist}절은 두 번째 답을 준다. 이
+답에는 $L(j\omega)$의 그래프만 있으면 되고 --- 그것은 측정할 수 있다 ---, 루프가
+안정한지 \emph{여부}뿐 아니라 안정성을 잃기까지 \emph{얼마나 여유가 있는지}도
+알려 준다.
+\end{question}
+
+%% ================================================================ 제4부
+\partdivider{제4부 --- 주파수 응답과 안정도}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{주파수 응답과 Bode 선도}\label{sec:freq}
+
+\subsection{안정한 플랜트}
+\begin{definition}[안정한 플랜트]\label{def:stable}
+모든 극점의 실수부가 음수일 때 그 플랜트를 \emph{안정하다}(stable)고 한다.
+\end{definition}
+
+\begin{remark}[이 절이 안정성에서 시작하는 이유]
+아래에서 하는 일은 전부 $P$를 허수축 위, 즉 $s=j\omega$에서 값매김하는 것이다.
+다시 말해 라플라스 변환을 푸리에 변환으로 바꿔 쓰는 것인데, 그 대입은 라플라스
+적분이 거기서 실제로 수렴할 때만 정당하다. 안정한 플랜트라면 수렴하고,
+$P(j\omega)$는 임펄스 응답의 푸리에 변환이 된다. 사인파를 넣어 실제로 측정할 수
+있는 양이라는 뜻이다. 반대로 극점이 우반평면에 있으면 허수축은 수렴영역 밖이고,
+사인파에 대한 응답은 한없이 커지며, $P(j\omega)$라는 기호는 무엇의 주파수응답도
+아니다. 안정성은 이 절 전체의 전제이지 곁가지가 아니다.
+\end{remark}
+
+\subsection{사인파를 넣으면 사인파가 나온다}
+안정한 플랜트에 $\sin\omega t$를 넣고 과도응답이 잦아들기를 기다리면, 남는 것은
+\emph{같은 주파수}의 사인파다.
+\begin{equation}\label{eq:freqresp}
+   \sin\omega t \;\longmapsto\; A\sin(\omega t+\theta),
+   \qquad A = |P(j\omega)|,\qquad \theta = \angle P(j\omega).
+\end{equation}
+바뀌는 것은 숫자 둘뿐이고, 둘 다 복소수 $P(j\omega)$ 하나에서 읽어낸다. 크기는
+진폭을 곱하고 편각은 위상을 옮긴다. 이 둘을 $\omega$의 함수로 본 것이
+\emph{주파수응답}이다. 전달함수를 손에 쥘 만한 실질적인 이유가 여기에 있다.
+미분방정식이 주파수마다 이득 하나와 위상 하나로 바뀐다.
+
+\begin{proof}[\eqref{eq:freqresp}가 성립하는 이유]
+입력의 변환은 $\omega/(s^{2}+\omega^{2})$이므로 \ref{sec:outputpoles}절에 의해
+\[
+   Y(s) = P(s)\,\frac{\omega}{s^{2}+\omega^{2}}
+        = \frac{as+b}{s^{2}+\omega^{2}} + \bigl(P\text{의 극점에서 오는 항들}\bigr)
+\]
+이다. 플랜트가 안정하므로 두 번째 무리는 사라지고, 남는 것은
+$y_{ss}(t) = a\cos\omega t+(b/\omega)\sin\omega t$다. $a$와 $b$를 구하려면 양변에
+$s-j\omega$를 곱하고 $s=j\omega$를 넣는다. 플랜트 항들은 사라지고
+\[
+   P(j\omega)\,\frac{\omega}{2j\omega} = \frac{a\,j\omega+b}{2j\omega}
+   \quad\Longrightarrow\quad
+   P(j\omega) = \frac{b}{\omega} + j a
+\]
+가 된다. 따라서 $b/\omega=|P(j\omega)|\cos\angle P(j\omega)$,
+$a=|P(j\omega)|\sin\angle P(j\omega)$이고, 삼각함수의 덧셈정리가 $y_{ss}$를
+$|P(j\omega)|\sin\bigl(\omega t+\angle P(j\omega)\bigr)$로 합쳐 준다.
+\end{proof}
+
+\begin{example}[두 주파수를 한꺼번에]
+$u(t)=2\sin t+3\cos(2t+1)$을 $P(s)=1/(s+1)$에 넣자. 선형성에 의해 각 항을 따로
+다루면 되고, 코사인도 사인과 같은 규칙을 따른다. $\omega=1$에서
+$P(j)=1/(1+j)$의 크기는 $1/\sqrt2$, 위상은 $-\pi/4$이고, $\omega=2$에서
+$P(2j)=1/(1+2j)$의 크기는 $1/\sqrt5$, 위상은 $-\arctan2\approx-63.4^\circ$다.
+따라서
+\[
+   y_{ss}(t) = \sqrt2\,\sin\!\Bigl(t-\frac\pi4\Bigr)
+             + \frac{3}{\sqrt5}\cos\bigl(2t+1-\arctan 2\bigr)
+\]
+이다. 높은 주파수일수록 더 많이 줄어들고 더 많이 늦어진다. $1/(s+1)$은 저역통과
+필터이고, 다음 소절의 Bode 선도가 그것을 한눈에 보여 준다.
+\end{example}
+
+\subsection{Bode 선도}
+주파수응답은 가로축을 $\log_{10}\omega$로 놓고 두 장으로 그린다. 하나는 크기를
+데시벨로 나타낸
+\[
+   20\log_{10}|P(j\omega)| ,
+\]
+다른 하나는 위상 $\angle P(j\omega)$다. 이 두 장을 합쳐 \emph{Bode 선도}라 한다.
+
+두 로그 모두 제값을 한다. 전달함수는 인수들의 \emph{곱}인데, 크기에 로그를 씌우면
+그 곱이 \emph{합}으로 바뀐다. 그래서 인수 하나하나가 따로 기여하고, 전체는 조각을
+더하기만 하면 얻어진다. 그다음 가로축을 $\log\omega$로 두면 그 조각들이 대부분의
+구간에서 직선이 된다.
+
+\subsection{인수로부터 크기를 쌓아 올리기}
+예를 들어
+\begin{equation}\label{eq:bodeex}
+   P(s) = \frac{K(s+z_1)(s+z_2)}
+               {(s+p_1)(s+p_2)^{2}\bigl(s^{2}+2\zeta\omega_n s+\omega_n^{2}\bigr)}
+\end{equation}
+를 보자. 크기에 $20\log_{10}$을 씌우면 인수마다 항 하나가 된다.
+\begin{equation}\label{eq:bodesum}
+\begin{aligned}
+   20\log|P| = 20\bigl(&\log|s+z_1| + \log|s+z_2| - \log|s+p_1| \\
+                       &- 2\log|s+p_2| - \log|s^{2}+2\zeta\omega_n s+\omega_n^{2}|\bigr)
+\end{aligned}
+\end{equation}
+이며 $s=j\omega$에서 값매김한다. 분자 인수는 $+$로, 분모 인수는 $-$로 들어가고,
+거듭제곱된 인수는 그 지수만큼 들어간다. $\log|s+p_2|$ 앞의 $2$가 그것이다.
+
+1차 인수 하나는 꺾임 하나에 대응한다(그림~\ref{fig:bode}). $s+z_1$을
+$s=j\omega$에서 보면
+\[
+   20\log|j\omega+z_1| = 10\log_{10}\bigl(\omega^{2}+z_1^{2}\bigr)
+   \;\approx\;
+   \begin{cases}
+      20\log z_1, & \omega \ll z_1,\\[2pt]
+      20\log \omega, & \omega \gg z_1
+   \end{cases}
+\]
+이므로 점근선은 수평선 하나와 기울기 $+20$\,dB/decade 인 직선 하나이고, 둘은
+\emph{꺾임 주파수}(corner frequency) $\omega=z_1$에서 만난다. 정작 그 지점의 참값은
+$20\log(z_1\sqrt2) = 20\log z_1 + 3.01$\,dB이다. 즉 곡선은 꺾임점보다 $3$\,dB
+\emph{위}로 지난다. 분모 인수는 같은 그림을 뒤집은 것으로 기울기가
+$-20$\,dB/decade이고 $3$\,dB \emph{아래}로 지나며, 거듭제곱된 $(s+p_2)^{2}$는 그
+둘을 두 배로 해서 $-40$\,dB/decade가 된다.
+
+\begin{figure}[htb]
+\centering
+\begin{tikzpicture}[>=Stealth,x=1.75cm,y=0.085cm]
+  % ---- axes ----
+  \draw[->] (-1.62,0) -- (1.80,0) node[below right,lbl] {$\log_{10}\omega$};
+  \draw[->] (-1.5,-6) -- (-1.5,35);
+  \node[rotate=90,anchor=south,lbl] at (-1.78,16) {$20\log_{10}|j\omega+z_1|$};
+  % ---- corner ----
+  \draw[dashed,gray] (0,-6) -- (0,33);
+  \node[below,lbl] at (0,-1.5) {$\log_{10}z_1$};
+  % ---- true curve ----
+  \draw[gray!65,thick] plot[domain=-1.5:1.5,samples=90,smooth,variable=\u]
+        (\u,{10*log10(1+pow(10,2*\u))});
+  % ---- asymptotes ----
+  \draw[thick] (-1.5,0) -- (0,0);
+  \draw[thick] (0,0) -- (1.5,30);
+  % ---- 3 dB at the corner ----
+  \node[circle,fill,inner sep=1.1pt] at (0,3.01) {};
+  \node[left,lbl] at (-0.05,7) {$3$\,dB};
+  \node[above left,lbl] at (1.28,29) {$+20$\,dB/decade};
+\end{tikzpicture}
+\caption{1차 인수 하나. 두 점근선은 꺾임 주파수 $\omega=z_1$에서 만나고, 참값
+(회색)은 꺾임점보다 $3$\,dB 위를 지난다. Bode 크기 선도는 인수마다 이런 그림을
+하나씩 더해서 만든다.}
+\label{fig:bode}
+\end{figure}
+
+\subsection{위상은 각을 더해서}\label{sec:phase}
+위상은 더 쉽다. 같은 인수분해가 이미 복소수의 곱이기 때문이다. $s=j\omega$에서
+각 인수를 극형식으로 쓰면
+\[
+   P(j\omega)
+   = \frac{\prod_i M_i e^{\,j\theta_i}}{\prod_j M'_j e^{\,j\theta'_j}} ,
+   \qquad\text{따라서}\qquad
+   \angle P(j\omega) = \sum_i \theta_i - \sum_j \theta'_j
+\]
+이다. 인수마다 각을 따로 재서 더하고 빼기만 하면 된다. 위상 선도도 크기 선도와
+마찬가지로 인수 하나씩 쌓아 만든다. 1차 인수의 각은
+\[
+   \angle(j\omega+z_1) = \arctan\frac{\omega}{z_1}
+\]
+로, 낮은 주파수의 $0^\circ$에서 높은 주파수의 $90^\circ$까지 올라가며 꺾임점에서
+정확히 $45^\circ$를 지난다. 변화는 거의 전부 꺾임점 양쪽 한 decade 안에서
+일어나므로, 흔히 쓰는 직선 근사는 $z_1/10$까지 $0^\circ$를 유지하고, $10z_1$까지
+$\log\omega$에 대해 직선으로 $90^\circ$까지 올라간 뒤, 그대로 머문다. 분모
+인수는 이것의 부호를 뒤집은 만큼 기여한다.
+
+\begin{remark}[기하학적으로 읽기]\label{rem:vectors}
+$j\omega+z_1 = j\omega-(-z_1)$은 영점 $-z_1$에서 허수축 위의 점 $j\omega$로 가는
+벡터다. $\omega$가 허수축을 따라 올라가는 동안 이 벡터의 길이가 그 인수의
+크기이고, 각이 그 인수의 위상이다. $P(j\omega)$의 인수는 모두 극점이나 영점에서
+$j\omega$로 그린 이런 벡터다. $P$의 크기는 영점 벡터 길이의 곱을 극점 벡터
+길이의 곱으로 나눈 것이고, 위상은 영점 벡터 각의 합에서 극점 벡터 각의 합을 뺀
+것이다. $j\omega$를 닫힌 곡선을 따라 도는 점으로 바꾼 같은 그림이
+\ref{sec:nyquist}절의 열쇠다.
+\end{remark}
+
+%% ------------------------------------------------------------------ 제6강
+\lecturebreak{제6강}{2026년 9월 21일}
+
+\subsection{2차 시스템과 감쇠비}\label{sec:second}
+\eqref{eq:bodeex}의 2차 인수는 따로 다룰 만하다. 점근선이 Bode 선도를 잘
+설명하지 \emph{못하는} 유일한 인수이고, 모든 감쇠 진동자의 전달함수이기도 하다.
+표준 2차 시스템은
+\begin{equation}\label{eq:second}
+   G(s) = \frac{\omega_n^{2}}{s^{2}+2\zeta\omega_n s+\omega_n^{2}},
+   \qquad \omega_n>0,\quad \zeta\ge 0
+\end{equation}
+로, $G(0)=1$이 되도록 정규화한 것이다. 두 파라미터에는 이름이 있다. $\omega_n$은
+\emph{고유진동수}(natural frequency), $\zeta$는 \emph{감쇠비}(damping ratio)다.
+둘 다 물리가 정해 준다. 댐퍼가 달린 스프링--질량계 $m\ddot q+b\dot q+kq=ku$를
+$m$으로 나누면 정확히 \eqref{eq:second}이고
+\begin{equation}\label{eq:zetawn}
+   \omega_n = \sqrt{k/m},\qquad
+   \zeta = \frac{b}{2\sqrt{km}}
+\end{equation}
+이다. 즉 $\omega_n$은 감쇠가 없었다면 시스템이 진동했을 주파수이고, $\zeta$는
+실제 감쇠를 진동을 막 억누르는 양 $2\sqrt{km}$에 견준 것이다. 감쇠항을
+$2\zeta s$가 아니라 $2\zeta\omega_n s$로 적기 때문에 $\zeta$는 차원 없는 수이고,
+아래에서 $\zeta$에 대해 하는 말은 시스템의 시간 척도와 무관하게 성립한다.
+
+\smallskip\noindent\textbf{극점.} $s^{2}+2\zeta\omega_n s+\omega_n^{2}$의 근은
+\[
+   s = -\zeta\omega_n \pm \omega_n\sqrt{\zeta^{2}-1}
+\]
+이고, $\zeta$의 값에 따라 시스템은 네 영역으로 나뉜다.
+\begin{center}\small
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{}lll@{}}
+\toprule
+$\zeta>1$   & 과감쇠(overdamped)        & 서로 다른 음의 실수 극점 두 개\\
+$\zeta=1$   & 임계감쇠(critically damped) & $-\omega_n$의 이중극점\\
+$0<\zeta<1$ & 부족감쇠(underdamped)       & $-\zeta\omega_n\pm j\omega_d$, \quad $\omega_d=\omega_n\sqrt{1-\zeta^{2}}$\\
+$\zeta=0$   & 비감쇠(undamped)          & 허수축 위의 $\pm j\omega_n$\\
+\bottomrule
+\end{tabular}
+\end{center}
+흥미로운 것은 부족감쇠인 경우다. 이때 극점은 원 $|s|=\omega_n$ 위에 있고, 원점에서
+극점으로 그은 선분이 음의 실축과 이루는 각 $\theta$는
+\begin{equation}\label{eq:zetaangle}
+   \cos\theta = \zeta
+\end{equation}
+로 정해진다(그림~\ref{fig:secondpoles}). 원점으로부터의 거리가 주파수이고, 각이
+감쇠다. $\zeta$가 일정한 선은 원점에서 나가는 반직선이다.
+
+\begin{figure}[htb]
+\centering
+\begin{tikzpicture}[>=Stealth,scale=1.0,
+   polex/.pic={\draw[thick] (-0.12,-0.12)--(0.12,0.12) (-0.12,0.12)--(0.12,-0.12);}]
+  \draw[->] (-2.9,0) -- (1.3,0) node[right] {$\operatorname{Re}s$};
+  \draw[->] (0,-2.4) -- (0,2.5) node[above] {$\operatorname{Im}s$};
+  \draw[dashed,gray] (90:2) arc (90:270:2);
+  \draw[thin] (0,0) -- (-1,1.732);
+  \draw[thin] (0,0) -- (-1,-1.732);
+  \pic at (-1,1.732) {polex};
+  \pic at (-1,-1.732) {polex};
+  \draw[dotted] (-1,1.732) -- (-1,0);
+  \draw[dotted] (-1,1.732) -- (0,1.732);
+  \node[below,lbl] at (-1,-0.02) {$-\zeta\omega_n$};
+  \node[right,lbl] at (0.02,1.732) {$j\omega_d$};
+  \draw (-0.6,0) arc (180:120:0.6);
+  \node[lbl] at (-0.78,0.33) {$\theta$};
+  \node[lbl,above left] at (-0.48,0.86) {$\omega_n$};
+  \node[lbl,anchor=west] at (0.35,-1.25) {$\cos\theta=\zeta$};
+\end{tikzpicture}
+\caption{\eqref{eq:second}의 부족감쇠 극점 쌍을 $\zeta=0.5$로 그린 것. 극점은
+반지름 $\omega_n$인 원 위에 있고, 극점이 음의 실축과 이루는 각 $\theta$는 감쇠비
+하나만으로 정해진다.}
+\label{fig:secondpoles}
+\end{figure}
+
+\smallskip\noindent\textbf{시간 응답.} $0<\zeta<1$일 때 단위계단입력
+$Y(s)=G(s)/s$에 \ref{sec:pfe}절의 부분분수를 적용하면
+\begin{equation}\label{eq:secondstep}
+   y(t) = 1 - \frac{e^{-\zeta\omega_n t}}{\sqrt{1-\zeta^{2}}}\,
+          \sin\bigl(\omega_d t+\theta\bigr),
+   \qquad \theta=\arccos\zeta
+\end{equation}
+를 얻는다. 이 식의 모든 조각을 극점에서 읽을 수 있다. 실수부 $-\zeta\omega_n$이
+감쇠하는 포락선을, 허수부 $\omega_d$가 출렁임의 주파수를 정한다
+(그림~\ref{fig:secondstep}). $\zeta$가 작으면 빠르지만 심하게 출렁이는 응답이,
+$\zeta$가 $1$에 가까우면 거의 넘치지 않지만 굼뜬 응답이 나온다. 곡선을 요약하는
+수는 둘, 최대 오버슈트(overshoot)와 정착시간(settling time)이다.
+\begin{equation}\label{eq:overshoot}
+   M_p = e^{-\pi\zeta/\sqrt{1-\zeta^{2}}},
+   \qquad
+   t_s \approx \frac{4}{\zeta\omega_n}\quad\text{($2\%$ 이내 기준)} .
+\end{equation}
+오버슈트는 $\zeta$에만, 즉 극점의 \emph{각}에만 의존하고, 정착시간은
+$\zeta\omega_n$에만, 즉 극점이 \emph{허수축에서 떨어진 거리}에만 의존한다.
+
+\begin{figure}[htb]
+\centering
+\begin{tikzpicture}[>=Stealth,x=0.46cm,y=2.1cm]
+  \draw[->] (0,0) -- (14.7,0) node[right,lbl] {$\omega_n t$};
+  \draw[->] (0,0) -- (0,1.95) node[above,lbl] {$y(t)$};
+  \draw[dotted,gray] (0,1) -- (14,1);
+  \foreach \tk in {0,2,...,14}{\draw (\tk,0) -- (\tk,-0.04) node[below,lbl] {\tk};}
+  \foreach \yk in {0.5,1,1.5}{\draw (0,\yk) -- (-0.18,\yk) node[left,lbl] {\yk};}
+  \draw[gray] plot[domain=0:14,samples=150,smooth]
+    (\x,{1-exp(-0.1*\x)/sqrt(0.99)*sin(deg(sqrt(0.99)*\x)+acos(0.1))});
+  \draw[dashed] plot[domain=0:14,samples=120,smooth]
+    (\x,{1-exp(-0.3*\x)/sqrt(0.91)*sin(deg(sqrt(0.91)*\x)+acos(0.3))});
+  \draw[thick] plot[domain=0:14,samples=100,smooth]
+    (\x,{1-exp(-0.7*\x)/sqrt(0.51)*sin(deg(sqrt(0.51)*\x)+acos(0.7))});
+  \draw[thick,dotted] plot[domain=0:14,samples=80,smooth] (\x,{1-(1+\x)*exp(-\x)});
+  % legend
+  \begin{scope}[shift={(9.2,0.14)}]
+    \draw[gray] (0,0.36) -- (1.4,0.36); \node[right,lbl] at (1.5,0.36) {$\zeta=0.1$};
+    \draw[dashed] (0,0.24) -- (1.4,0.24); \node[right,lbl] at (1.5,0.24) {$\zeta=0.3$};
+    \draw[thick] (0,0.12) -- (1.4,0.12); \node[right,lbl] at (1.5,0.12) {$\zeta=0.7$};
+    \draw[thick,dotted] (0,0) -- (1.4,0); \node[right,lbl] at (1.5,0) {$\zeta=1$};
+  \end{scope}
+\end{tikzpicture}
+\caption{\eqref{eq:second}의 단위계단응답을 $\omega_n t$에 대해 그린 것. 감쇠가
+적을수록 첫 봉우리가 높고 출렁임이 늦게 잦아든다. $\zeta=1$은 전혀 넘치지 않는다.}
+\label{fig:secondstep}
+\end{figure}
+
+\begin{remark}[학기 목표, 다시 보기]
+질문~\ref{q:goal}은 수레가 $5$초 안에 정착하기를 요구한다. \eqref{eq:overshoot}에
+따르면 응답이 얼마나 빨리 정착하는지와 얼마나 넘치는지는 둘 다 \emph{우세
+극점이 어디에 있는지}에 관한 말이다. $5$\,s 안에 정착하려면
+$\zeta\omega_n \gtrsim 4/5$여야 하고, 오버슈트는 각 $\theta$가 정한다. 개루프
+two-cart 시스템에게는 극점을 어디에 두라고 말할 수가 없다. 폐루프는 할 수 있다.
+\ref{sec:blocks}절에서 되먹임이 한 일이 그것이다.
+\end{remark}
+
+\smallskip\noindent\textbf{주파수응답.} 허수축 위에서
+\begin{equation}\label{eq:secondfreq}
+   G(j\omega) = \frac{\omega_n^{2}}{(\omega_n^{2}-\omega^{2})+j\,2\zeta\omega_n\omega}
+\end{equation}
+이다. 정규화한 주파수 $u=\omega/\omega_n$을 쓰면
+\[
+   |G(j\omega)| = \frac{1}{\sqrt{(1-u^{2})^{2}+(2\zeta u)^{2}}},
+   \qquad
+   \angle G(j\omega) = -\operatorname{atan2}\bigl(2\zeta u,\;1-u^{2}\bigr).
+\]
+점근선은 2차식에서 기대하는 그대로다. $u\ll1$이면 크기는 $1$(0\,dB), 위상은
+$0^\circ$이고, $u\gg1$이면 크기는 $1/u^{2}$로 기울기 $-40$\,dB/decade인 직선,
+위상은 $-180^\circ$다. 둘은 $\omega=\omega_n$에서 만난다. 그러나 꺾임점
+\emph{에서} 무슨 일이 일어나는지는 $\zeta$가 정한다. \eqref{eq:secondfreq}에
+$u=1$을 넣으면
+\[
+   G(j\omega_n) = \frac{1}{j\,2\zeta},
+   \qquad
+   |G(j\omega_n)| = \frac{1}{2\zeta},
+   \qquad
+   \angle G(j\omega_n) = -90^\circ
+\]
+이다. 꺾임점의 위상은 모든 $\zeta$에 대해 $-90^\circ$이지만, 크기는
+$1/(2\zeta)$로 감쇠가 작으면 커진다. $\zeta=0.1$이면 곡선이 점근선보다 $14$\,dB
+위에 온다(그림~\ref{fig:secondbode}). 1차 인수는 점근선에서 $3$\,dB 넘게 벗어나는
+일이 없지만, 2차 인수는 높은 \emph{공진 봉우리}(resonant peak)를 가질 수 있다.
+$|G|^{2}$를 $u$로 미분한 것을 0으로 두면, $\zeta<1/\sqrt2$일 때 봉우리가
+\begin{equation}\label{eq:resonance}
+   \omega_r = \omega_n\sqrt{1-2\zeta^{2}},
+   \qquad
+   M_r = |G(j\omega_r)| = \frac{1}{2\zeta\sqrt{1-\zeta^{2}}}
+\end{equation}
+에 있고, $\zeta\ge1/\sqrt2\approx0.707$이면 봉우리가 아예 없음을 알 수 있다. 한편
+위상은 $\zeta$가 작아질수록 $0^\circ$에서 $-180^\circ$로 점점 더 급하게 떨어지고,
+$\zeta\to0$인 극한에서는 $\omega_n$에서 $180^\circ$만큼 한 번에 뛴다.
+
+\begin{figure}[htb]
+\centering
+\begin{tikzpicture}[>=Stealth,x=2.7cm]
+  % ---------------- magnitude ----------------
+  \begin{scope}[y=0.058cm]
+    \draw[->] (-1,0) -- (1.13,0) node[right,lbl] {$\log_{10}(\omega/\omega_n)$};
+    \draw[->] (-1,-42) -- (-1,20) node[above,lbl] {dB};
+    \foreach \d in {-40,-20,0}{\draw (-1,\d) -- (-1.03,\d) node[left,lbl] {\d};}
+    \draw[dotted,gray] (0,-42) -- (0,18);
+    \draw[gray!70,densely dashed] (-1,0) -- (0,0) -- (1,-40);
+    \draw[gray] plot[domain=-1:1,samples=160,smooth]
+      (\x,{-10*log10(pow(1-pow(10,2*\x),2)+pow(0.2*pow(10,\x),2))});
+    \draw[dashed] plot[domain=-1:1,samples=120,smooth]
+      (\x,{-10*log10(pow(1-pow(10,2*\x),2)+pow(0.6*pow(10,\x),2))});
+    \draw[thick] plot[domain=-1:1,samples=100,smooth]
+      (\x,{-10*log10(pow(1-pow(10,2*\x),2)+pow(1.4*pow(10,\x),2))});
+    \draw[thick,dotted] plot[domain=-1:1,samples=100,smooth]
+      (\x,{-10*log10(pow(1-pow(10,2*\x),2)+pow(2.0*pow(10,\x),2))});
+    \begin{scope}[shift={(-0.93,-33)}]
+      \draw[gray] (0,9) -- (0.2,9); \node[right,lbl] at (0.22,9) {$\zeta=0.1$};
+      \draw[dashed] (0,4.5) -- (0.2,4.5); \node[right,lbl] at (0.22,4.5) {$\zeta=0.3$};
+      \draw[thick] (0.78,9) -- (0.98,9); \node[right,lbl] at (1.0,9) {$\zeta=0.7$};
+      \draw[thick,dotted] (0.78,4.5) -- (0.98,4.5); \node[right,lbl] at (1.0,4.5) {$\zeta=1$};
+    \end{scope}
+  \end{scope}
+  % ---------------- phase ----------------
+  \begin{scope}[yshift=-4.3cm,y=0.017cm]
+    \draw[->] (-1,0) -- (1.13,0) node[right,lbl] {$\log_{10}(\omega/\omega_n)$};
+    \draw[->] (-1,-190) -- (-1,12) node[above,lbl] {위상};
+    \foreach \d in {0,-90,-180}{\draw (-1,\d) -- (-1.03,\d) node[left,lbl] {$\d^\circ$};}
+    \draw[dotted,gray] (0,-190) -- (0,5);
+    \draw[dotted,gray] (-1,-90) -- (1,-90);
+    \draw[gray] plot[domain=-1:1,samples=160,smooth]
+      (\x,{-atan2(0.2*pow(10,\x),1-pow(10,2*\x))});
+    \draw[dashed] plot[domain=-1:1,samples=120,smooth]
+      (\x,{-atan2(0.6*pow(10,\x),1-pow(10,2*\x))});
+    \draw[thick] plot[domain=-1:1,samples=100,smooth]
+      (\x,{-atan2(1.4*pow(10,\x),1-pow(10,2*\x))});
+    \draw[thick,dotted] plot[domain=-1:1,samples=100,smooth]
+      (\x,{-atan2(2.0*pow(10,\x),1-pow(10,2*\x))});
+  \end{scope}
+\end{tikzpicture}
+\caption{2차 시스템 \eqref{eq:second}의 Bode 크기 선도(위)와 위상 선도(아래).
+위 그림의 회색 파선이 점근선이다. 모든 곡선이 $\omega=\omega_n$에서
+$-90^\circ$를 지나고, 거기서의 봉우리 $20\log_{10}(1/2\zeta)$는 $\zeta\to0$일 때
+한없이 커진다.}
+\label{fig:secondbode}
+\end{figure}
+
+\begin{remark}[한 사실, 세 그림]
+약한 감쇠는 세 번 나타난다. 허수축에 가까운 극점으로, 계단응답의 출렁임으로,
+Bode 선도의 공진 봉우리로. 이것들은 같은 사실을 세 방향에서 본 것이다.
+$-\zeta\omega_n+j\omega_d$의 극점은 허수축에서 $\zeta\omega_n$만큼 떨어져 있으므로,
+$j\omega$가 그 옆을 지날 때 보충~\ref{rem:vectors}의 극점 벡터가 아주 짧아진다.
+그리고 분모의 짧은 벡터는 큰 크기를 뜻한다. 실제로 $\omega=\omega_d$에서 그
+벡터의 길이는 $\zeta\omega_n$이고 다른 극점 벡터의 길이는 약 $2\omega_d$이므로
+$|G|\approx\omega_n^{2}/(2\zeta\omega_n\omega_d)=M_r$이 된다.
+\end{remark}
+
+\begin{example}[감쇠 없는 공진]
+$\zeta\to0$의 극한을 끝까지 밀어 보자. $\zeta=0$이면
+$G(s)=\omega_n^{2}/(s^{2}+\omega_n^{2})$의 극점이 허수축 위에 있으므로 안정하지
+않고, \eqref{eq:freqresp}는 적용되지 않는다. 정확히 고유진동수로,
+$u=\sin\omega_n t$로 구동해 보자.
+\[
+   Y(s) = \frac{\omega_n^{2}}{s^{2}+\omega_n^{2}}\cdot\frac{\omega_n}{s^{2}+\omega_n^{2}}
+        = \frac{\omega_n^{3}}{(s^{2}+\omega_n^{2})^{2}},
+   \qquad
+   y(t) = \tfrac12\bigl(\sin\omega_n t-\omega_n t\cos\omega_n t\bigr).
+\]
+입력의 극점이 플랜트의 극점과 겹쳐 $\pm j\omega_n$의 극점이 이중극점이 되고,
+\ref{sec:pfe}절에 따르면 이중극점은 $t$를 곱해 준다. 진동이 선형으로, 한없이
+커진다. 이것이 가장 순수한 형태의 공진이고, $\zeta\to0$인 Bode 곡선의 무한한
+봉우리는 그 주파수 영역의 그림자다.
+\end{example}
+
+\begin{remark}[우세 극점]\label{rem:dominant}
+실제 플랜트에는 극점이 많은데 왜 2차 시스템을 이렇게 자세히 보는가? 안정한
+시스템에서 극점마다 항 $e^{p_it}$가 하나씩 생기는데, 멀리 왼쪽에 있는 극점의
+항은 허수축 가까운 극점의 항보다 훨씬 먼저 사라진다. 그래서 허수축에 가장 가까운
+극점, 즉 \emph{우세 극점}(dominant poles)이 처음 잠깐 이후에 보이는 모든 것을
+결정한다. 우세 극점이 나머지와 충분히 떨어진 복소수 쌍이면(그리고 영점과 거의
+약분되어 유수가 작아지는 경우가 아니면), $n$차 시스템은 그 두 극점을 가진 2차
+시스템과 거의 똑같이 움직인다. 2차가 아닌 플랜트에서도 $\zeta$, $\omega_n$,
+오버슈트, 정착시간을 실무 용어로 쓰는 이유가 이것이다.
+\end{remark}
+
+\subsection{기본 인수 목록}\label{sec:catalogue}
+모든 유리 전달함수는 아래 인수들의 곱이므로, 모든 Bode 선도는 이들 그림의 합이다.
+1차 인수는 $0$\,dB에서 출발하는 정규화된 꼴로 적었다.
+
+\begin{center}\small
+\renewcommand{\arraystretch}{1.6}
+\begin{tabular}{@{}llll@{}}
+\toprule
+인수 & 크기 & 위상 & 꺾임점에서\\
+\midrule
+$K>0$ & $20\log_{10}K$로 평평 & $0^\circ$ & ($K<0$이면 $\pm180^\circ$ 추가)\\
+$s$ & $+20$\,dB/dec, $\omega=1$에서 $0$\,dB & $+90^\circ$ & ---\\
+$1/s$ & $-20$\,dB/dec, $\omega=1$에서 $0$\,dB & $-90^\circ$ & ---\\
+$1+s/z$ & $0$, $\omega=z$부터 $+20$\,dB/dec & $0^\circ\to+90^\circ$ & $+3$\,dB, $+45^\circ$\\
+$1/(1+s/p)$ & $0$, $\omega=p$부터 $-20$\,dB/dec & $0^\circ\to-90^\circ$ & $-3$\,dB, $-45^\circ$\\
+$\dfrac{\omega_n^{2}}{s^{2}+2\zeta\omega_n s+\omega_n^{2}}$ & $0$, $\omega_n$부터 $-40$\,dB/dec & $0^\circ\to-180^\circ$ & $1/(2\zeta)$, $-90^\circ$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{example}[완전한 스케치]
+$P(s)=\dfrac{10(s+1)}{s(s+10)}=\dfrac{1+s}{s\,(1+s/10)}$을 보자. 적분기 하나,
+꺾임 주파수 $1$인 1차 영점, 꺾임 주파수 $10$인 1차 극점의 곱이다. 왼쪽부터
+읽으면, $\omega=1$ 아래에서는 적분기만 작동하므로 크기는 $-20$\,dB/decade로
+떨어지며 $\omega=1$에서 $0$\,dB를 지나고 위상은 $-90^\circ$다. $\omega=1$에서
+영점이 기울기를 상쇄해 크기는 $0$\,dB에서 평평해지고 위상은 $0^\circ$ 쪽으로
+올라간다. $\omega=10$에서 극점이 기울기를 다시 $-20$\,dB/decade로, 위상을 다시
+$-90^\circ$ 쪽으로 되돌린다. 전체 선도는 꺾임점 $1$과 $10$에서 이어 붙인 직선
+세 조각이다.
+\end{example}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Nyquist 선도와 폐루프 안정도}\label{sec:nyquist}
+
+\subsection{질문, 다시}
+\ref{sec:blocks}절에 따르면 루프 전달함수가 $L=PC$인 폐루프는 특성방정식
+$1+L(s)=0$이 $\operatorname{Re}s\ge0$인 근을 갖지 않을 때, 그리고 그때에만
+안정하다.
+\[
+   F(s) = 1+L(s) = \frac{D_L(s)+N_L(s)}{D_L(s)}
+\]
+로 두자. $F$의 \emph{영점}은 폐루프 극점이다. 모르는 것이고, 바로 우리가 찾고
+싶은 것이다. $F$의 \emph{극점}은 $L$의 극점, 곧 개루프 극점이다. 플랜트를 알고
+제어기는 우리가 골랐으니 아는 것이다. Nyquist의 아이디어는 우반평면에 있는 모르는
+영점을 계산하지 않고 세는 것이다. $s$가 그 반평면의 경계를 따라 도는 동안 $F$의
+위상을 지켜보면 된다.
+
+\subsection{각으로 세기: 편각 원리}\label{sec:argument}
+$\Gamma$를 $s$-평면의 단순 닫힌 곡선으로, 한 바퀴 \emph{시계방향}으로 도는
+것이라 하고, $F$는 $\Gamma$ 위에 극점도 영점도 없는 유리함수라 하자. $s$가
+$\Gamma$를 도는 동안 점 $F(s)$는 $F$-평면에 닫힌 곡선 $F(\Gamma)$를 그린다
+(그림~\ref{fig:argument}). $F$를 \eqref{eq:factored}처럼 인수분해하면
+\ref{sec:phase}절에 의해
+\[
+   \angle F(s) = \angle k + \sum_i \angle(s-z_i) - \sum_j \angle(s-p_j)
+\]
+이다. 이제 인수 하나만 따라가 보자. $z_i$가 $\Gamma$ \emph{안}에 있으면, $z_i$에서
+움직이는 점 $s$로 가는 벡터 $s-z_i$는 $s$가 $\Gamma$를 도는 동안 한 바퀴 온전히
+돈다. 시계방향이므로 각의 변화는 $-2\pi$다. $z_i$가 \emph{밖}에 있으면 벡터는
+이리저리 흔들리지만 결국 제자리로 돌아온다. 알짜 변화는 $0$이다. 극점도 마찬가지인데,
+$\angle F$에서 부호만 반대다. 인수들을 모두 더하면 다음을 얻는다.
+
+\begin{theorem}[편각 원리]\label{thm:argument}
+$\Gamma$ 안에 있는 $F$의 영점과 극점의 개수를 중복도까지 세어 각각 $Z$와 $P$라
+하자. $s$가 $\Gamma$를 시계방향으로 한 바퀴 돌면 $\angle F(s)$는 모두
+$-2\pi(Z-P)$만큼 변한다. 즉 곡선 $F(\Gamma)$는 원점을 시계방향으로
+\[
+   N = Z - P
+\]
+번 감싼다(포위한다). 반시계방향으로 한 번 감싸는 것은 $-1$로 센다.
+\end{theorem}
+
+예를 들어 $\Gamma$ 안에 두 점 $a$, $b$를, 밖에 세 번째 점 $c$를 두자. 그러면
+$F=s-a$는 원점을 시계방향으로 한 번 감고, $F=(s-a)(s-b)$는 $\theta_a$와
+$\theta_b$가 각각 한 바퀴씩 돌므로 두 번 감으며, $F=(s-a)(s-b)(s-c)$도
+\emph{여전히} 두 번 감는다. $\theta_c$는 $c$에서 $\Gamma$에 그은 두 접선 사이의
+쐐기 안에서 흔들리기만 하기 때문이다. 극점은 방향을 뒤집는다. $\angle F=-\theta_a$
+이므로 $F=1/(s-a)$는 \emph{반시계방향}으로 한 번 감는다.
+
+이 각의 셈이 \emph{곧} 증명이다. \ref{sec:phase}절의 위상 규칙을, 허수축을 따라
+올라가는 점 대신 고리를 따라 도는 점에 적용한 것이다. (복소해석에서는 같은 셈이
+반시계방향 $\Gamma$에 대한
+$\frac{1}{2\pi j}\oint_\Gamma F'(s)/F(s)\,\d s = Z-P$로 나타난다.
+$F'/F=\sum_i 1/(s-z_i)-\sum_j 1/(s-p_j)$이고, $\Gamma$ 안에 든 항은 각각 유수
+$+1$ 또는 $-1$을 보탠다.)
+
+\begin{figure}[htb]
+\centering
+\begin{tikzpicture}[>=Stealth,
+   polex/.pic={\draw[thick] (-0.11,-0.11)--(0.11,0.11) (-0.11,0.11)--(0.11,-0.11);}]
+  % ---- s-plane ----
+  \begin{scope}
+    \node[lbl] at (-1.9,1.55) {$s$-평면};
+    \draw[thick] (0,0) ellipse (1.6 and 1.1);
+    \draw[->,thick] (100:1.6 and 1.1) arc[start angle=100,end angle=80,x radius=1.6,y radius=1.1];
+    \draw[->,thick] (-80:1.6 and 1.1) arc[start angle=-80,end angle=-100,x radius=1.6,y radius=1.1];
+    \node[lbl] at (1.35,-1.05) {$\Gamma$};
+    \draw[thick] (-0.35,0.15) circle (0.1);
+    \node[lbl,below] at (-0.35,0.03) {$z_1$};
+    \pic at (2.35,0.75) {polex};
+    \node[lbl,right] at (2.45,0.75) {$p_1$};
+    \coordinate (s) at (40:1.6 and 1.1);
+    \fill (s) circle (1.3pt); \node[lbl,above right] at (s) {$s$};
+    \draw[->] (-0.35,0.15) -- ($(s)+(-0.05,-0.03)$);
+    \draw[->,gray] (2.35,0.75) -- ($(s)+(0.06,0.0)$);
+  \end{scope}
+  % ---- F-plane ----
+  \begin{scope}[xshift=6.4cm]
+    \node[lbl] at (-1.6,1.55) {$F$-평면};
+    \draw[->] (-1.9,0) -- (1.9,0);
+    \draw[->] (0,-1.5) -- (0,1.6);
+    \draw[thick] plot[domain=0:360,samples=90,smooth,variable=\a]
+      ({0.25+1.25*cos(\a)+0.25*cos(2*\a)},{-0.95*sin(\a)+0.12*sin(3*\a)});
+    \draw[->,thick] (1.5,-0.1) -- (1.48,-0.3);
+    \fill (0,0) circle (1.3pt);
+    \node[lbl] at (1.45,1.05) {$F(\Gamma)$};
+  \end{scope}
+\end{tikzpicture}
+\caption{편각 원리. $s$가 $\Gamma$를 시계방향으로 한 바퀴 돌면, 안에 든 영점에서
+나가는 벡터 $s-z_1$은 시계방향으로 한 바퀴 돌고, 밖에 있는 극점에서 나가는 벡터
+$s-p_1$은 앞뒤로 흔들리기만 한다. 안에 영점 하나, 극점은 없으므로 상
+$F(\Gamma)$는 원점을 시계방향으로 한 번 감싼다. $N=Z-P=1$.}
+\label{fig:argument}
+\end{figure}
+
+\subsection{Nyquist 경로와 Nyquist 선도}
+우반평면의 근을 세려면 $\Gamma$를 우반평면의 경계로 잡으면 된다. \emph{Nyquist
+경로}(Nyquist contour) $\Gamma_N$은 허수축을 따라 $-jR$에서 $+jR$까지 올라간 뒤,
+우반평면을 지나는 반원 $|s|=R$을 따라 시계방향으로 돌아오며, $R\to\infty$로
+보낸다(그림~\ref{fig:contour}). 그 안쪽은 열린 우반평면 전체다. $L$이 허수축
+\emph{위}에 극점을 가지면 --- 이를테면 적분기 $1/s$ --- $\Gamma_N$은 그 극점을
+지나갈 수 없다. 대신 우반평면 쪽으로 부푼 반지름 $\varepsilon\to0$의 작은 반원으로
+각 극점을 비켜 가고, 그러면 그 극점들은 바깥에 남는다.
+
+\begin{figure}[htb]
+\centering
+\begin{tikzpicture}[>=Stealth,scale=0.95,
+   polex/.pic={\draw[thick] (-0.11,-0.11)--(0.11,0.11) (-0.11,0.11)--(0.11,-0.11);}]
+  \fill[black!5] (0,-2.2) -- (0,-0.32) arc (-90:90:0.32) -- (0,2.2) arc (90:-90:2.2) -- cycle;
+  \draw[->] (-1.4,0) -- (3.0,0) node[right] {$\operatorname{Re}s$};
+  \draw[->] (0,-2.7) -- (0,2.75) node[above] {$\operatorname{Im}s$};
+  \draw[thick] (0,-2.2) -- (0,-0.32);
+  \draw[->,thick] (0,-2.2) -- (0,-1.15);
+  \draw[thick] (0,-0.32) arc (-90:90:0.32);
+  \draw[thick] (0,0.32) -- (0,2.2);
+  \draw[->,thick] (0,0.32) -- (0,1.35);
+  \draw[thick] (0,2.2) arc (90:-90:2.2);
+  \draw[->,thick] (45:2.2) arc (45:35:2.2);
+  \pic at (0,0) {polex};
+  \node[lbl,anchor=west] at (1.6,1.95) {$R\to\infty$};
+  \node[lbl,anchor=west] at (0.42,0.36) {$\varepsilon\to0$};
+  \node[lbl] at (1.05,-0.95) {우반평면};
+\end{tikzpicture}
+\caption{시계방향으로 도는 Nyquist 경로 $\Gamma_N$. 허수축을 따라 올라간 뒤 반지름이
+무한대인 반원을 따라 돌아온다. 그 안쪽(음영)이 열린 우반평면이다. 허수축 위의
+극점 --- 여기서는 원점 --- 은 우반평면 쪽으로 작게 비켜 가서 피한다.}
+\label{fig:contour}
+\end{figure}
+
+$L$에 의한 $\Gamma_N$의 상을 $L$의 \emph{Nyquist 선도}(Nyquist plot)라 한다. 두
+가지 사실 덕분에 그리기가 쉽다.
+\begin{itemize}[leftmargin=*,itemsep=2pt]
+\item $L$이 strictly proper이면 $|s|\to\infty$일 때 $L(s)\to0$이므로, 큰 반원 전체가
+한 점 $0$으로 간다. 그러면 선도는 곡선 $L(j\omega)$, $-\infty<\omega<\infty$일
+뿐이다. 주파수응답을 Bode 선도 두 장 대신 복소평면에 그린 것이다.
+\item $L$의 계수가 실수이므로 $L(-j\omega)=\overline{L(j\omega)}$이다. 즉
+$\omega<0$인 절반은 $\omega>0$인 절반을 실축에 대해 뒤집은 것이다.
+\end{itemize}
+실제로는 $\omega\ge0$에 대해 $L(j\omega)$를 그리고 --- 원점까지의 거리가
+$|L(j\omega)|$, 각이 $\angle L(j\omega)$이므로 Bode 선도에서 바로 읽어낸다 ---
+그것을 실축에 대해 뒤집은 뒤, 작은 우회로가 보태는 부분을 더한다.
+
+\subsection{Nyquist 안정도 판별법}
+정리~\ref{thm:argument}를 $\Gamma_N$ 위의 $F=1+L$에 적용하자. $\Gamma_N$ 안에 있는
+$F$의 영점은 우반평면의 폐루프 극점이고, 안에 있는 $F$의 극점은 거기 있는 개루프
+극점이다. 그리고 $F(\Gamma_N)$은 $L$의 Nyquist 선도를 오른쪽으로 한 칸 옮긴
+것이므로, $F$가 원점을 감싸는 것은 $L$이 점 $-1$을 감싸는 것과 같다. 판별법은
+이것이 전부다.
+
+\begin{keybox}
+\textbf{Nyquist 안정도 판별법.} 열린 우반평면에 있는 $L(s)$의 극점 수를 $P$,
+$L$의 Nyquist 선도가 점 $-1$을 시계방향으로 감싸는 횟수를 $N$이라 하자
+(반시계방향으로 감싸는 것은 음수로 센다). 그러면 우반평면에 있는 폐루프 극점의
+수는
+\[
+   Z = N + P
+\]
+이다. 폐루프는 $Z=0$, 즉 $N=-P$이고 선도가 $-1$을 지나지 않을 때, 그리고
+그때에만 안정하다(선도가 $-1$을 지나면 폐루프는 허수축 위에 극점을 갖는다).
+특히 $L$ 자체가 안정하면($P=0$) 폐루프는 Nyquist 선도가 $-1$을 감싸지 않을 때,
+그리고 그때에만 안정하다.
+
+\smallskip\noindent
+반대 방향으로 세면 같은 말이 이렇게 된다. \emph{$-1$을 반시계방향으로 감싸는
+횟수는 $P-Z$와 같다.}
+\end{keybox}
+
+\begin{remark}[왜 이런 수고를 할 만한가]
+$D_L+N_L$의 근을 그냥 계산하는 것과 비교해 이 판별법에는 두 가지가 다르다.
+첫째, $L(j\omega)$만 있으면 되고 그것은 \emph{측정}할 수 있다. 개루프를
+사인파로 구동해 이득과 위상을 기록하면 되므로, 플랜트 모델이 전혀 필요 없다.
+둘째, 루프가 안정한지뿐 아니라 불안정에 얼마나 \emph{가까운지}도 보여 준다.
+$-1$ 근처를 지나는 선도는 이득이나 위상이 조금만 바뀌어도 --- 1절에서 반드시
+예상해야 한다고 했던 바로 그런 모델링 오차로 --- $-1$ 건너편으로 밀려날 수 있다.
+\end{remark}
+
+\subsection{예제}
+\begin{example}[안정한 개루프]\label{ex:nyq1}
+$K>0$인 $L(s)=\dfrac{K}{(s+1)(s+2)(s+3)}$. 개루프 극점이 모두 좌반평면에 있으므로
+$P=0$이다. $s=j\omega$에서 분모는
+\[
+   (6-6\omega^{2}) + j\,(11\omega-\omega^{3})
+\]
+이다. 선도는 양의 실축 위의 $L(0)=K/6$에서 출발해, 위상이 $0^\circ$에서
+$-270^\circ$ 쪽으로 떨어지는 동안 제4사분면과 제3사분면을 지나 시계방향으로
+움직인다. 음의 실축은 분모의 허수부가 사라지는 $\omega^{2}=11$에서 가로지르고,
+거기서 $L=K/(6-66)=-K/60$이다(그림~\ref{fig:nyqex} 왼쪽, $K=20$). $K<60$이면
+교점이 $-1$의 오른쪽에 있어 감싸지 않는다. $N=0$, $Z=0$, 안정. $K>60$이면 선도가
+$-1$을 시계방향으로 두 번 감싼다. $N=2$이므로 폐루프 극점 두 개가 우반평면에
+있다. 경계인 $K=60$에서는 선도가 $\omega=\sqrt{11}$에서 $-1$을 지나며, 실제로
+\[
+   D_L+N_L = s^{3}+6s^{2}+11s+66 = (s+6)(s^{2}+11)
+\]
+의 폐루프 극점이 정확히 $\pm j\sqrt{11}$, 즉 선도가 $-1$을 만나는 주파수에 있다.
+\end{example}
+
+\begin{example}[루프 안의 적분기]\label{ex:nyq2}
+$K>0$인 $L(s)=\dfrac{K}{s(s+1)}$. 원점의 극점이 허수축 위에 있으므로 $\Gamma_N$은
+$\phi$가 $-90^\circ$에서 $+90^\circ$까지 가는 $s=\varepsilon e^{j\phi}$로 그것을
+비켜 간다. 거기서 $L(s)\approx K/s = (K/\varepsilon)e^{-j\phi}$이므로, 반지름이
+엄청나게 큰 $K/\varepsilon$인 반원을 $+90^\circ$에서 $-90^\circ$까지, 즉 평면의
+오른쪽 절반을 지나 시계방향으로 그린다. 허수축 위에서는
+\[
+   L(j\omega) = -\frac{K}{1+\omega^{2}} - j\,\frac{K}{\omega(1+\omega^{2})}
+\]
+이므로, $\omega>0$에 대해 선도는 점근선 $\operatorname{Re}L=-K$를 따라 아래
+멀리서 올라와 제3사분면에 머물다가 $\omega\to\infty$일 때 위상 $-180^\circ$로
+원점에 들어간다. 허수부가 결코 0이 되지 않으므로 음의 실축을 가로지르지 않고,
+$-1$은 결코 감싸지지 않는다. 비켜 간 극점은 세지 않으므로 $P=0$이고 $N=0$이다.
+따라서 $Z=0$이고 모든 $K>0$에 대해 루프가 안정하다. 직접 확인하면
+$D_L+N_L=s^{2}+s+K$이고, 모든 $K>0$에 대해 그 근의 실수부는 음수다.
+\end{example}
+
+우회로는 언제나 이 예제처럼 움직인다. 허수축 위의 단순 극점 $p$ 근처에서
+$L(s)\approx c/(s-p)$이고, 우회로가 $s-p$를 $+180^\circ$ 돌리는 동안(아래를
+가리키다가 오른쪽을 거쳐 위를 가리키도록) 상은 무한대 반지름에서 $-180^\circ$
+돈다. 시계방향 반 바퀴다. 허수축 위의 이중극점은 시계방향 한 바퀴,
+$-360^\circ$를 주며, 그것만으로도 $-1$을 감쌀 수 있다.
+
+\begin{example}[허수축 위의 극점 쌍]\label{ex:nyq4}
+$L(s)=\dfrac{1}{s^{2}+4}=\dfrac{1}{(s-2j)(s+2j)}$. 두 극점 모두 허수축 위에 있어
+비켜 가므로 $P=0$이다. 그 밖에서는 $L(j\omega)=1/(4-\omega^{2})$가 실수다.
+$|\omega|\to2$일 때 양의 실축을 따라 $\tfrac14$에서 $+\infty$까지 가고,
+$|\omega|>2$에서는 음의 실축을 따라 $-\infty$에서 $0$으로 돌아온다. 각 우회로는
+무한대에서 시계방향 반원을 보태는데 --- $+2j$의 것은 아래 반평면을, $-2j$의 것은
+위 반평면을 지난다 ---, 둘이 합쳐 선도를 무한히 큰 원으로 닫는다. 음의 실축
+전체가 덮이므로 선도는 $4-\omega^{2}=-1$, 즉 $\omega=\sqrt5$에서 $-1$을
+\emph{지난다}. 판별법에 따르면 폐루프는 허수축 위에 극점을 갖고, 실제로 $1+L=0$은
+$s^{2}+5=0$, $s=\pm j\sqrt5$를 뜻한다. $\sqrt5$\,rad/s의 진동이 줄지도 커지지도
+않고 계속된다.
+\end{example}
+
+\begin{example}[불안정한 개루프]\label{ex:nyq3}
+$K>0$인 $L(s)=\dfrac{K}{s-1}$. 이제 개루프가 $s=1$에 극점을 가지므로 $P=1$이다.
+허수축 위에서
+\[
+   L(j\omega) = \frac{K}{j\omega-1}
+   = -\frac{K}{1+\omega^{2}} - j\,\frac{K\omega}{1+\omega^{2}}
+\]
+이고, 이것은 $-K/2$를 중심으로 하는 반지름 $K/2$인 원을 그린다. 원점
+($\omega=-\infty$)에서 출발해 $-\tfrac K2+j\tfrac K2$, 이어서 $-K$($\omega=0$),
+이어서 $-\tfrac K2-j\tfrac K2$를 거쳐 원점으로 돌아오는 반시계방향이다
+(그림~\ref{fig:nyqex} 오른쪽). $K>1$이면 원이 $-1$을 품고 반시계방향으로 한 번
+감싼다. $N=-1$이므로 $Z=N+P=0$이고 루프는 안정하다. $K<1$이면 $-1$을 비켜 간다.
+$N=0$, $Z=1$, 불안정. 직접 보면 $D_L+N_L=s-1+K$이고, 정확히 $K>1$일 때 안정하다.
+불안정한 플랜트를 안정화하려면 감싸기가 \emph{필요하다}. ``선도가 $-1$을 감싸면
+안 된다''는 안정한 개루프에만 해당하는 규칙이다.
+\end{example}
+
+\begin{remark}[Bode 선도에서 판별법 읽기]\label{rem:bodenyq}
+$L$이 안정하고($P=0$) 그 위상이 한 주파수 $\omega_{pc}$에서 단 한 번
+$-180^\circ$를 지나 떨어지면, $\omega>0$인 Nyquist 선도는 점 $-|L(j\omega_{pc})|$
+에서 음의 실축을 단 한 번 가로지른다. 선도는 그 점이 $-1$의 왼쪽에 있을 때 정확히
+$-1$을 감싼다. 그래서 판별법은 Bode 선도에서 확인할 수 있는 명제가 된다.
+\[
+   \text{폐루프 안정}
+   \quad\Longleftrightarrow\quad
+   |L(j\omega_{pc})| < 1
+   \quad\text{단, } \angle L(j\omega_{pc}) = -180^\circ .
+\]
+위상이 루프 신호를 완전히 뒤집어 놓을 즈음에는 이득이 이미 1보다 작아야 한다.
+예제~\ref{ex:nyq1}에서는 위상이 $\omega_{pc}=\sqrt{11}$에서 $-180^\circ$에
+이르고, 거기서 $|L|=K/60$이다. 다시 같은 조건 $K<60$이다. 거기서 이득이 너무
+크면 이득을 낮추거나(지상 보상기의 아이디어), 위상을 다시 끌어올려 $-180^\circ$에
+더 늦게 도달하게 할 수 있다(진상 보상기).
+\end{remark}
+
+\begin{figure}[htb]
+\centering
+\begin{tikzpicture}[>=Stealth,
+   declare function={Lm(\w)=20/sqrt(\w*\w+1)/sqrt(\w*\w+4)/sqrt(\w*\w+9);
+                     La(\w)=-(atan(\w)+atan(\w/2)+atan(\w/3));}]
+  % ---------------- Example: K/((s+1)(s+2)(s+3)), K=20 ----------------
+  \begin{scope}[scale=0.8]
+    \draw[->] (-1.7,0) -- (4.2,0) node[right,lbl] {$\operatorname{Re}L$};
+    \draw[->] (0,-2.8) -- (0,2.8) node[above,lbl] {$\operatorname{Im}L$};
+    \draw[thick] plot[domain=-2:1.6,samples=120,smooth]
+      ({Lm(pow(10,\x))*cos(La(pow(10,\x)))},{Lm(pow(10,\x))*sin(La(pow(10,\x)))});
+    \draw[dashed] plot[domain=-2:1.6,samples=120,smooth]
+      ({Lm(pow(10,\x))*cos(La(pow(10,\x)))},{-Lm(pow(10,\x))*sin(La(pow(10,\x)))});
+    \draw[->,thick] ({Lm(0.30)*cos(La(0.30))},{Lm(0.30)*sin(La(0.30))})
+                 -- ({Lm(0.34)*cos(La(0.34))},{Lm(0.34)*sin(La(0.34))});
+    \fill (-1,0) circle (2.2pt);
+    \node[lbl,above left] at (-1,0.05) {$-1$};
+    \draw (-0.333,0.1) -- (-0.333,-0.1);
+    \node[lbl,below left] at (-0.30,-0.08) {$-\tfrac13$};
+    \node[lbl,above right] at (3.333,0) {$\tfrac{10}{3}$};
+    \node[lbl,right] at (0.12,-2.05) {$\omega=1$};
+    \node[lbl] at (3.35,-1.45) {$\omega>0$};
+    \node[lbl] at (3.35,1.45) {$\omega<0$};
+  \end{scope}
+  % ---------------- Example: K/(s-1), K=1.5 ----------------
+  \begin{scope}[xshift=8.6cm,scale=1.45]
+    \draw[->] (-2.0,0) -- (0.7,0) node[right,lbl] {$\operatorname{Re}L$};
+    \draw[->] (0,-1.1) -- (0,1.15) node[above,lbl] {$\operatorname{Im}L$};
+    \draw[thick] (-0.75,0) circle (0.75);
+    \draw[->,thick] (-0.75,0.75) arc (90:110:0.75);
+    \draw[->,thick] (-0.75,-0.75) arc (270:290:0.75);
+    \fill (-1,0) circle (1.5pt);
+    \node[lbl,above] at (-1.02,0.04) {$-1$};
+    \node[lbl,below left] at (-1.5,0) {$-K$};
+    \node[lbl,left] at (-1.52,0.18) {$\omega=0$};
+    \node[lbl,above right] at (0,0) {$\omega\to\pm\infty$};
+  \end{scope}
+\end{tikzpicture}
+\caption{왼쪽: 예제~\ref{ex:nyq1}의 $K=20$일 때 Nyquist 선도(실선 $\omega>0$,
+파선 $\omega<0$). 음의 실축을 $-1$의 오른쪽인 $-K/60=-\tfrac13$에서 가로지르므로
+$-1$을 감싸지 않고 폐루프는 안정하다. 오른쪽: 예제~\ref{ex:nyq3}의 $K=1.5$.
+개루프는 불안정하고($P=1$) 선도가 $-1$을 반시계방향으로 한 번 돈다($N=-1$).
+폐루프를 안정하게 만드는 것이 바로 이것이다.}
+\label{fig:nyqex}
+\end{figure}
+
+%% ================================================================ 제5부
+\partdivider{제5부 --- 상태공간을 위한 선형대수}
+
+\lecturebreak{제7$\sim$10강}{2026년 9월 23일$\sim$10월 7일}
+
+\section{벡터공간, 계수, 선형방정식}\label{sec:vspace}
+
+상태는 $\R^{n}$의 한 점이고, 입력은 그 점을 특정한 방향으로 밀며, 출력은 그 좌표들의
+특정한 조합을 알려 준다. 그러니 이 과목의 나머지 부분이 $\dot x=Ax+Bu$를 두고 하는
+모든 일은 벡터, 부분공간, 행렬에 관한 진술이다. 이 대단원은 앞으로 쓸 선형대수를
+필요해지는 순서대로 모아 둔다.
+
+\subsection{열로 읽는 행렬}
+행렬 $A\in\R^{m\times n}$은 $m$개의 행과 $n$개의 열을 가진다. $m=n$이면
+\emph{정방}(square) 행렬, $m>n$이면 \emph{세로로 긴}(tall) 행렬, $m<n$이면
+\emph{가로로 긴}(fat) 행렬이라 한다. 전치 $A\tp\in\R^{n\times m}$은
+$(ABC)\tp=C\tp B\tp A\tp$를 만족하고, 복소 행렬에서는 \emph{켤레전치}(Hermitian
+transpose) $A^{H}=\overline{A}\tp$를 쓴다. $A\in\R^{m\times n}$과
+$B\in\R^{n\times k}$의 곱 $C=AB$의 성분은 $c_{ij}=\sum_{l}a_{il}b_{lj}$이지만, 이
+곱을 읽는 다른 세 방법이 훨씬 쓸모 있다. $A$의 열을 $a_1,\dots,a_n$, $B$의 행을
+$b_1\tp,\dots,b_n\tp$이라 쓰자.
+\begin{enumerate}[label=(\roman*),itemsep=2pt]
+\item $Ax = x_1a_1+\dots+x_na_n$: 행렬과 벡터의 곱은 \emph{열들의 선형결합}(linear
+combination)이다.
+\item $y\tp B = y_1b_1\tp+\dots+y_nb_n\tp$: 행벡터와 행렬의 곱은 행들의
+선형결합이다.
+\item $AB = \sum_{i=1}^{n} a_i\,b_i\tp$: 곱은 \emph{외적}(outer product)\emph{의
+합}이고, 각 $a_ib_i\tp$는 계수가 1인 행렬이다.
+\end{enumerate}
+내내 머릿속에 두어야 할 것은 읽기 (i)이다. $Ax=b$를 풀 수 있느냐고 묻는 것은 $b$가
+$A$의 열들의 조합이냐고 묻는 것과 같다.
+
+\subsection{벡터공간, 생성, 기저, 차원}
+\begin{definition}[벡터공간]
+벡터들의 집합 $S$가 덧셈과 스칼라곱에 대해 닫혀 있으면, 즉 $x,y\in S$이고
+$a,b\in\R$일 때 $ax+by\in S$이면, $S$를 \emph{벡터공간}(vector space)($\R^{n}$의
+\emph{부분공간}(subspace))이라 한다.
+\end{definition}
+$a=b=0$으로 두면 모든 벡터공간이 원점을 품는다는 것을 알 수 있다. \emph{원점을
+지나는} 직선이나 평면은 부분공간이고, 원점을 비껴가는 것은 부분공간이 아니다.
+
+$a_1,\dots,a_k$의 \emph{선형결합}은 $\sum_i c_ia_i$이고, $\sum_ic_ia_i=0$이면
+반드시 모든 $c_i=0$일 때 이 벡터들을 \emph{선형독립}(linearly independent)이라
+한다. 어느 하나도 나머지로 만들어 낼 수 없다는 것, 즉 모두가 정말로 서로 다른
+방향을 가리킨다는 뜻이다. 선형결합 전체의 집합이 \emph{생성}(span)
+\[
+   \operatorname{span}\{a_1,\dots,a_k\} = \Bigl\{\,\sum_{i=1}^{k}c_ia_i \;:\; c_i\in\R\Bigr\}
+\]
+이고, 이것은 벡터공간이다. 두 조합을 더하거나 한 조합에 스칼라를 곱해도 또 하나의
+조합이 되기 때문이다. 벡터공간의 \emph{기저}(basis)는 그 공간을 생성하는 선형독립인
+벡터들의 집합이다. 기저는 유일하지 않지만 어느 기저든 벡터의 개수는 같고, 그 개수가
+\emph{차원}(dimension)이다. $\R^{3}$의 평면 $x_3=0$에서 벡터 하나로는 평면을 생성할
+수 없고, 그 안의 평행하지 않은 아무 두 벡터나 기저를 이루므로 이 평면의 차원은 $2$다.
+벡터들이 서로 수직이고 길이가 1인 기저를 \emph{정규직교}(orthonormal) 기저라 한다.
+
+부분공간을 기술하는 방법은 두 가지이고, 둘 다 쓰게 된다.
+\begin{itemize}[leftmargin=*,itemsep=2pt]
+\item \textbf{쌓아 올려서}: 생성으로 기술한다. 평면 $x_3=0$은
+$\operatorname{span}\{e_1,e_2\}$이다. 독립인 생성 벡터 하나마다 차원이 하나씩
+늘어난다($0\to2$).
+\item \textbf{깎아 내려서}: 방정식으로 기술한다. 같은 평면은
+$\{x\in\R^{3}:[0\;0\;1]\,x=0\}$이다. 독립인 제약 하나마다 차원이 하나씩 줄어든다
+($3\to2$).
+\end{itemize}
+$x_2x_3$-평면에서 원점을 지나 $45^\circ$로 놓인 직선은
+$\operatorname{span}\{(0,1,1)\}$이고, 똑같이
+$\{x\in\R^{3}: [1\;0\;0]\,x=0,\ [0\;1\;-1]\,x=0\}$이기도 하다. 독립인 제약 둘이
+$3-2=1$차원을 남긴다.
+
+\subsection{치역, 영공간, 방정식 \texorpdfstring{$Ax=b$}{Ax=b}}
+\label{sec:rangenull}
+모든 행렬 $A\in\R^{m\times n}$에는 두 부분공간이 딸려 있고, 두 기술 방식이 하나씩이다.
+\begin{equation}\label{eq:rangenull}
+   \mathcal R(A) = \{Ax : x\in\R^{n}\}\subseteq\R^{m},
+   \qquad
+   \mathcal N(A) = \{x\in\R^{n} : Ax=0\}\subseteq\R^{n}.
+\end{equation}
+읽기 (i)에 따라 \emph{치역}(range) $\mathcal R(A)$는 열들의 생성이다. 이것을
+\emph{열공간}(column space)이라고도 부르며, 쌓아 올리는 기술이다. \emph{영공간}(null
+space) $\mathcal N(A)$는 깎아 내리는 기술이다. $A$의 \emph{계수}(rank)는 선형독립인
+열의 개수이고, 이는 언제나 선형독립인 행의 개수와 같으며, $\mathcal R(A)$의 차원이다.
+
+두 부분공간은 선형방정식 $Ax=b$에 대해 묻는 두 질문에 답한다.
+\begin{itemize}[leftmargin=*,itemsep=2pt]
+\item \textbf{존재.} 해가 존재할 필요충분조건은 $b\in\mathcal R(A)$, 곧 $b$가
+열들의 조합이라는 것이다.
+\item \textbf{유일성.} $Ax=b$이고 $Ax^{*}=b$이면 $A(x-x^{*})=0$이므로 두 해는
+$\mathcal N(A)$의 원소만큼 차이 난다. 해가 유일할 필요충분조건은
+$\mathcal N(A)=\{0\}$이고, 읽기 (i)로 보면 이는 $x_1a_1+\dots+x_na_n=0$이 $x=0$일
+때만 성립한다는 것, 곧 열들이 선형독립이라는 것이다.
+\end{itemize}
+열들이 독립인 행렬, 즉 $\rank A=n$인 행렬은 \emph{열 완전 계수}(full column
+rank)라 하고, 그때 $\mathcal N(A)=\{0\}$이다. 존재와 유일성은 답이 다른 별개의
+질문이고, 둘을 떼어 생각하는 편이 이롭다.
+
+\begin{remark}[차원 세기]
+위에서 깎아 내리며 센 것은 일반적인 사실이다. $A\in\R^{m\times n}$에 대해
+\[
+   \dim\mathcal R(A)+\dim\mathcal N(A) = n
+\]
+이고, 이를 \emph{계수--퇴화차수 관계}(rank--nullity)라 한다. $n$개의 입력 방향 가운데
+$\rank A$개는 독립인 출력에 닿고, 나머지 $n-\rank A$개는 $0$으로 보내진다.
+\end{remark}
+
+\begin{example}[두 수레의 평형점]\label{ex:cartnull}
+\eqref{eq:ABCD}의 두 수레 행렬 $A$에서, 힘을 가하지 않을 때 제자리에 머무는 상태는
+$Ax=0$의 해다. $1$행과 $3$행에서 $x_2=x_4=0$, 곧 두 수레가 모두 정지해 있다. 그러면
+$2$행은 $\frac{k}{m_1}(x_3-x_1)=0$이 되어 $x_1=x_3$이고, $4$행도 같은 말을 한다. 따라서
+\[
+   \mathcal N(A) = \operatorname{span}\{(1,0,1,0)\tp\},
+   \qquad \rank A = 3 .
+\]
+두 수레가 같은 거리만큼 나아가 있고 스프링이 늘어나지 않은 위치는 어디든 평형점이다.
+수레를 되돌려 당기는 바닥 스프링이 없기 때문이다. 특히 질문~\ref{q:goal}의 목표,
+두 수레가 $1$\,m 앞에 정지해 있는 $x=(1,0,1,0)\tp$는 제어하지 않은 시스템의
+평형점이다. 일단 거기에 가면 수레는 $u=0$으로 그 자리에 머문다. 댐퍼 $b$를 남겨
+두어도 달라지는 것은 없다. $b$가 들어간 항은 모두 속도가 곱해져 있기 때문이다.
+\end{example}
+
+\subsection{역행렬과 행렬식}
+정방 행렬 $A\in\R^{n\times n}$은 $AA^{-1}=A^{-1}A=I$인 $A^{-1}$이 있으면
+\emph{가역}(invertible)이라 한다. $A^{-1}=[x_1\;\cdots\;x_n]$으로 쓰면 방정식
+$AA^{-1}=I$는 $n$개의 방정식 $Ax_i=e_i$이므로, 역행렬은 모든 $e_i$, 따라서
+$\R^{n}$ 전체가 $\mathcal R(A)$에 들어 있을 때 정확히 존재한다. 정방 행렬에서는
+그것이 정확히 $\mathcal N(A)=\{0\}$일 때 일어난다. 그러므로 다음은 모두 동치다.
+$A$가 가역이다; $\mathcal R(A)=\R^{n}$; $\mathcal N(A)=\{0\}$; 열들이 독립이다;
+$\rank A=n$; $\det A\neq0$; $0$이 $A$의 고윳값이 아니다.
+
+$2\times2$ 행렬에서는
+\[
+   \begin{bmatrix}a&b\\c&d\end{bmatrix}^{-1}
+   = \frac{1}{ad-bc}\begin{bmatrix}d&-b\\-c&a\end{bmatrix}
+   = \frac{\operatorname{adj}A}{\det A}
+\]
+이고, 공식 $A^{-1}=\operatorname{adj}A/\det A$는 모든 차원에서 성립한다. 여기서
+$\operatorname{adj}A$는 \emph{수반행렬}(adjugate), $\det A$는
+\emph{행렬식}(determinant)이며, 이것이 \ref{sec:ss2tf}절의
+$(sI-A)^{-1}=\operatorname{adj}(sI-A)/\det(sI-A)$ 뒤에 있는 공식이다. 행렬식은
+$\det A\tp=\det A$와 $\det(ABC)=\det A\,\det B\,\det C$를 만족한다.
+
+\begin{proposition}[슈어 보수]\label{prop:schur}
+$A$와 $D$가 정방인 $M=\begin{bmatrix}A&B\\C&D\end{bmatrix}$에 대해, $A$가
+가역이면
+\[
+   \det M = \det A\,\det\bigl(D-CA^{-1}B\bigr)
+\]
+이고, $D$가 가역이면 $\det M=\det D\,\det\bigl(A-BD^{-1}C\bigr)$이다.
+\end{proposition}
+\begin{proof}
+블록 소거: $\begin{bmatrix}A&B\\C&D\end{bmatrix}
+=\begin{bmatrix}I&0\\CA^{-1}&I\end{bmatrix}
+\begin{bmatrix}A&B\\0&D-CA^{-1}B\end{bmatrix}$. 첫 인수의 행렬식은 $1$이고 둘째
+인수는 블록 삼각이다. 다른 경우도 대칭적이다.
+\end{proof}
+행렬 $D-CA^{-1}B$를 $M$에서 $A$의 \emph{슈어 보수}(Schur complement)라 한다. 블록
+$A$를 소거하고 나서 $D$에 남는 것으로, 스칼라에 대한 가우스 소거와 똑같다.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{좌표, 고윳값, 대각화}\label{sec:eigen}
+
+\subsection{상태 좌표 바꾸기}\label{sec:similarity}
+시스템의 상태벡터는 하나의 선택이다. 각 수레의 위치와 속도가 한 가지 선택이고, 두
+수레 묶음의 위치와 스프링의 늘어난 길이가 또 다른 선택이다. 가역인 아무
+$T\in\R^{n\times n}$이나 새 좌표
+\[
+   z(t) = T\,x(t)
+\]
+를 정한다. $x=T^{-1}z$를 \eqref{eq:std}에 대입하면
+\begin{equation}\label{eq:simtransform}
+   \dot z = TAT^{-1}\,z + TB\,u, \qquad y = CT^{-1}\,z + D\,u .
+\end{equation}
+사중쌍 $(A,B,C,D)$가 $(TAT^{-1},TB,CT^{-1},D)$로 바뀌는데, 이를
+\emph{닮음변환}(similarity transformation)이라 한다. 물리는 바뀌지 않았으니 잴 수
+있는 것은 무엇도 바뀌어서는 안 되고, 실제로 전달함수는 그대로다.
+\[
+   CT^{-1}\bigl(sI-TAT^{-1}\bigr)^{-1}TB + D
+   = CT^{-1}\bigl(T(sI-A)T^{-1}\bigr)^{-1}TB + D
+   = C(sI-A)^{-1}B + D
+\]
+여기서 $sI=T(sI)T^{-1}$을 썼다. \ref{sec:ss2tf}절의 실현이 전혀 유일하지 않은
+이유 하나가 이것이다. 가역인 $T$ 하나하나가 한 실현을 같은 전달함수를 가진 다른
+실현으로 바꾼다.
+
+\subsection{고윳값과 고유벡터}
+\begin{definition}[고윳값, 고유벡터]
+$Av=\lambda v$이면 수 $\lambda$를 $A\in\R^{n\times n}$의 \emph{고윳값}(eigenvalue),
+$v\neq0$을 그 \emph{고유벡터}(eigenvector)라 한다.
+\end{definition}
+고유벡터는 $A$가 돌리지 않고 $\lambda$배로 늘이기만 하는 방향이다. $Av=\lambda v$를
+$(\lambda I-A)v=0$으로 고쳐 쓰면, $\lambda$가 고윳값인 것은 정확히
+$\mathcal N(\lambda I-A)\neq\{0\}$일 때, 곧 $\lambda I-A$가 가역이 아닐 때다.
+\begin{equation}\label{eq:charpoly}
+   \det(\lambda I-A) = \lambda^{n}+a_{n-1}\lambda^{n-1}+\dots+a_1\lambda+a_0 = 0 .
+\end{equation}
+좌변이 \emph{특성다항식}(characteristic polynomial)이고 차수가 $n$이므로, $A$는
+중복을 세어 $n$개의 고윳값을 가진다. 계수가 실수이므로 복소 고윳값은 켤레쌍으로
+나온다. $\mathcal N(\lambda I-A)$의 영 아닌 벡터는 모두 고유벡터이고, 이 부분공간이
+$\lambda$의 \emph{고유공간}(eigenspace)이다.
+
+고윳값은 좌표에 의존하지 않는다. \eqref{eq:simtransform}에 따라
+\[
+   \det\bigl(\lambda I-TAT^{-1}\bigr) = \det\bigl(T(\lambda I-A)T^{-1}\bigr)
+   = \det T\,\det(\lambda I-A)\,\det T^{-1} = \det(\lambda I-A)
+\]
+이므로 특성다항식 전체가 불변이다. 그리고
+$P(s)=C\operatorname{adj}(sI-A)B/\det(sI-A)+D$의 분모는 정확히 $\det(sI-A)$다.
+분자와 약분되는 인수가 있는 경우를 빼면 \emph{$A$의 고윳값이 곧 전달함수의
+극점이다}. 그림~\ref{fig:routes}의 두 기술이 여기서 만난다.
+
+\subsection{대각화}\label{sec:diag}
+$A$가 고윳값 $\lambda_1,\dots,\lambda_n$에 속하는 선형독립인 고유벡터
+$v_1,\dots,v_n$을 $n$개 가진다고 하자. $n$개의 방정식 $Av_i=\lambda_iv_i$를 옆으로
+나란히 쌓으면
+\[
+   A\,[v_1\;\cdots\;v_n] = [\lambda_1v_1\;\cdots\;\lambda_nv_n]
+   = [v_1\;\cdots\;v_n]
+     \begin{bmatrix}\lambda_1&&\\&\ddots&\\&&\lambda_n\end{bmatrix},
+\]
+즉
+\begin{equation}\label{eq:diagonalize}
+   AV = V\Lambda,\qquad V^{-1}AV=\Lambda,\qquad A = V\Lambda V^{-1}.
+\end{equation}
+$V$가 가역인 것은 바로 그 열들이 독립이기 때문이다. \ref{sec:similarity}절의 말로
+하면, 좌표 $z=V^{-1}x$가 상태행렬을 대각으로 만든다. 이것이 \emph{대각화}
+(diagonalization)다.
+
+독립인 고유벡터가 언제 $n$개 있는가? 두 개수가 이를 정한다. 고윳값의 \emph{대수적
+중복도}(algebraic multiplicity)는 그것이 \eqref{eq:charpoly}의 근으로 몇 번
+나오는가이고, \emph{기하적 중복도}(geometric multiplicity)는
+$\dim\mathcal N(\lambda I-A)$, 곧 그 고윳값이 가진 독립인 고유벡터의 개수다.
+언제나 $1\le$ 기하적 $\le$ 대수적이다.
+\begin{itemize}[leftmargin=*,itemsep=2pt]
+\item \emph{서로 다른} 고윳값에 속하는 고유벡터들은 선형독립이다. 그러므로 $n$개의
+고윳값이 모두 다르면 $A$는 대각화 가능하다.
+\item 일반적으로, $A$가 대각화 가능할 필요충분조건은 모든 고윳값에서 기하적 중복도가
+대수적 중복도와 같은 것이다.
+\end{itemize}
+
+\begin{example}[중복도가 같을 때와 다를 때]
+두 행렬
+\[
+   A=\begin{bmatrix}1&0&0&0\\0&2&0&0\\0&0&2&0\\0&0&0&3\end{bmatrix}
+   \quad\text{와}\quad
+   B=\begin{bmatrix}1&0&0&0\\0&2&1&0\\0&0&2&0\\0&0&0&3\end{bmatrix}
+\]
+는 모두 고윳값 $1,2,2,3$을 가지며, 두 행렬 모두에서 고윳값 $2$의 대수적 중복도는
+$2$다. $A$에서는 $\mathcal N(2I-A)=\operatorname{span}\{e_2,e_3\}$의 차원이 $2$다.
+독립인 고유벡터가 둘이고, $A$는 (이미) 대각이다. $B$에서는
+\[
+   2I-B=\begin{bmatrix}1&0&0&0\\0&0&-1&0\\0&0&0&0\\0&0&0&-1\end{bmatrix},
+   \qquad \mathcal N(2I-B)=\operatorname{span}\{e_2\}
+\]
+의 차원이 $1$이다. 고윳값의 두 사본이 고유벡터 방향 하나를 나눠 쓰므로 $V$를
+가역으로 만들 수 없고, $B$는 대각화 가능하지 않다. 차이를 만드는 것은 대각 밖의
+$1$ 하나다.
+\end{example}
+
+\begin{example}[두 수레, 분리하기]\label{ex:cartdecouple}
+질량이 같다고 하자, $m_1=m_2=m$(그리고 \eqref{eq:ABCD}에서처럼 $b=0$). 두 운동방정식
+\eqref{eq:eom}을 더하고 빼면
+\[
+   m(\ddot p_1+\ddot p_2) = u - c(\dot p_1+\dot p_2),\qquad
+   m(\ddot p_1-\ddot p_2) = u - 2k(p_1-p_2) - c(\dot p_1-\dot p_2).
+\]
+그래서 좌표 $z=(p_1+p_2,\;\dot p_1+\dot p_2,\;p_1-p_2,\;\dot p_1-\dot p_2)$, 곧
+\[
+   T=\begin{bmatrix}1&0&1&0\\0&1&0&1\\1&0&-1&0\\0&1&0&-1\end{bmatrix},
+   \qquad
+   TAT^{-1}=\begin{bmatrix}0&1&0&0\\0&-\frac cm&0&0\\0&0&0&1\\0&0&-\frac{2k}m&-\frac cm\end{bmatrix},
+   \qquad TB=\frac1m\begin{bmatrix}0\\1\\0\\1\end{bmatrix}
+\]
+인 $z=Tx$는 시스템을 서로 독립인 두 조각으로 가른다. 하나는 마찰만 느끼는 묶음
+전체의 운동이고, 다른 하나는 마찰과 두 배의 스프링을 느끼는, 두 수레가 서로에 대해
+하는 진동이다. 이제 고윳값을 블록별로 읽어 낼 수 있다. 첫 블록에서 $0$과 $-c/m$,
+둘째 블록에서 $\lambda^{2}+\frac cm\lambda+\frac{2k}{m}$의 근이다. 첫 번째 과제에서
+쓴 인자($m=1$, $k=4$, $c=0.4$)로는 $0$, $-0.4$, $-0.2\pm2.8213j$이다. 고윳값
+$0$은 예제~\ref{ex:cartnull}의 고유벡터 $(1,0,1,0)\tp$에 속한다. 개루프에서 아무것도
+붙잡아 주지 않는, 묶음의 자유로운 표류다.
+\end{example}
+
+\subsection{대칭행렬}\label{sec:symmetric}
+대칭행렬 $A=A\tp$는 무엇보다 다루기 좋은 행렬이고, \ref{sec:svd}절에서 다시 나온다.
+\begin{theorem}[스펙트럼 정리]\label{thm:spectral}
+$A=A\tp\in\R^{n\times n}$이라 하자. 그러면 $A$의 고윳값은 모두 실수이고, 서로 다른
+고윳값에 속하는 고유벡터는 직교하며, 정규직교인 고유벡터 $n$개를 고를 수 있다. 그것들을
+$V$의 열로 두면
+\[
+   V\tp V=I,\qquad V^{-1}=V\tp,\qquad
+   A = V\Lambda V\tp = \sum_{i=1}^{n}\lambda_i\,v_iv_i\tp .
+\]
+\end{theorem}
+\begin{proof}[직교성]
+$Av_i=\lambda_iv_i$이고 $Av_j=\lambda_jv_j$이면
+$\lambda_i\,v_j\tp v_i = v_j\tp Av_i = v_j\tp A\tp v_i = (Av_j)\tp v_i
+= \lambda_j\,v_j\tp v_i$이므로 $(\lambda_i-\lambda_j)\,v_j\tp v_i=0$이고,
+$\lambda_i\neq\lambda_j$이면 $v_j\tp v_i=0$이다.
+\end{proof}
+차원이 $k$인 고유공간 안에서는 언제나 정규직교인 벡터 $k$개를 고를 수 있고, 서로 다른
+고윳값의 고유공간끼리는 직교하므로, 이 선택들을 모두 모으면 정규직교 집합이 된다.
+대칭행렬에서는 $V$의 역행렬이 공짜다. 전치가 곧 역행렬이고, $V\tp AV=\Lambda$는
+$V^{-1}AV$보다 훨씬 계산하기 쉽다. 마지막 꼴 $A=\sum\lambda_iv_iv_i\tp$는 $A$를
+고유방향마다 하나씩, 계수가 1인 조각들의 합으로 쓴 것이다.
+
+\subsection{조르당 표준형}\label{sec:jordan}
+위의 $B$처럼 고유벡터가 모자란 행렬은 대각화할 수 없지만, 모든 정방 행렬은 그다음으로
+좋은 꼴로 바꿀 수 있다.
+\begin{theorem}[조르당 표준형]
+모든 $A\in\R^{n\times n}$은 어떤 가역(복소일 수도 있는) $V$에 대해 $AV=VJ$를
+만족한다. 여기서 $J$는 대각에
+\[
+   J_k(\lambda)=\begin{bmatrix}\lambda&1&&\\&\lambda&\ddots&\\&&\ddots&1\\&&&\lambda\end{bmatrix}
+\]
+꼴의 \emph{조르당 블록}(Jordan block)이 놓인 블록 대각행렬이다. 이를 \emph{조르당
+표준형}(Jordan form)이라 한다. $A$가 대각화 가능한 것은 정확히 모든 블록이 $1\times1$일
+때다.
+\end{theorem}
+$V$의 열이 무엇인지 보려고 $3\times3$ 예를 들자.
+\[
+   AV=VJ,\qquad J=\begin{bmatrix}\lambda_1&0&0\\0&\lambda_2&1\\0&0&\lambda_2\end{bmatrix},
+   \qquad
+   [Av_1\;Av_2\;Av_3]=[\lambda_1v_1\;\;\lambda_2v_2\;\;\lambda_2v_3+v_2].
+\]
+처음 두 열은 보통의 고유벡터다. 셋째 열은
+\[
+   (A-\lambda_2I)\,v_3 = v_2
+\]
+를 만족하므로 고유벡터가 아니다. $A-\lambda_2I$가 이것을 소멸시키지 않고 고유벡터
+$v_2$로 보낸다. 이런 $v_3$을 \emph{일반화 고유벡터}(generalized eigenvector)라 한다.
+일반화 고유벡터는 정확히 어떤 고윳값의 대수적 중복도가 기하적 중복도보다 클 때
+존재하며, 모자란 고유벡터가 주었을 방향을 대신 채워 준다.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{행렬지수와 상태 응답}\label{sec:expm}
+
+\subsection{\texorpdfstring{$\dot x=Ax$}{xdot = Ax} 풀기}
+스칼라에서 $\dot x=ax$의 해는 $x(t)=e^{at}x_0$이다. 행렬의 지수를 같은 급수로
+정의하고 나면 시스템에서도 똑같다.
+\begin{definition}[행렬지수]
+$A\in\R^{n\times n}$에 대해 \emph{행렬지수}(matrix exponential)는
+\[
+   e^{At} = I + At + \frac{(At)^{2}}{2!} + \frac{(At)^{3}}{3!} + \cdots .
+\]
+\end{definition}
+이 급수는 모든 $A$와 $t$에서 수렴한다. 항별로 미분하면
+\[
+   \frac{\d}{\d t}e^{At} = A + A^{2}t + \frac{A^{3}t^{2}}{2!}+\cdots
+   = A\Bigl(I+At+\frac{(At)^{2}}{2!}+\cdots\Bigr) = Ae^{At}
+\]
+이므로 $x(t)=e^{At}x_0$은 $\dot x=Ax$와 $x(0)=x_0$을 만족한다. 이것이 \emph{바로 그}
+해다. 성질들은 스칼라의 것을 따르는데, 예외가 하나 있다.
+\begin{equation}\label{eq:expmprops}
+   e^{A\cdot0}=I,\qquad e^{At_1}e^{At_2}=e^{A(t_1+t_2)},\qquad
+   \bigl(e^{At}\bigr)^{-1}=e^{-At},\qquad
+   e^{At}e^{Bt}\neq e^{(A+B)t}\ \text{$AB=BA$가 아니면} .
+\end{equation}
+셋째는 둘째에서 $t_2=-t_1$로 두면 나온다. 특히 $e^{At}$는 언제나 가역이다. 마지막
+것이 성립하지 않는 이유는 급수를 곱해 펼치면 $AB$와 $BA$가 서로 다른 순서로 나오기
+때문이다. MATLAB에서 행렬지수는 \verb|exp|(성분별로 지수를 취한다)가 아니라
+\verb|expm|이다. $x_0$에서 출발한 둘째 수레의 $t=10$에서의 위치는
+\verb|[0 0 1 0]*expm(A*10)*x0|이다.
+
+\subsection{상태 응답}\label{sec:stateresponse}
+입력이 있으면 $\dot x-Ax=Bu$에 $e^{-At}$를 곱한다. 좌변은 완전미분
+$e^{-At}\dot x-e^{-At}Ax=\frac{\d}{\d t}\bigl(e^{-At}x(t)\bigr)$이 되고, $0$에서
+$t$까지 적분하면 $e^{-At}x(t)-x_0=\int_0^{t}e^{-A\tau}Bu(\tau)\,\d\tau$이다.
+$e^{At}$를 곱하면
+\begin{equation}\label{eq:voc}
+   \boxed{\;x(t) = e^{At}x_0 + \int_{0}^{t} e^{A(t-\tau)}\,B\,u(\tau)\,\d\tau ,\qquad
+   y(t) = Ce^{At}x_0 + C\!\int_{0}^{t} e^{A(t-\tau)}Bu(\tau)\,\d\tau + Du(t).\;}
+\end{equation}
+이것이 \emph{상수변화 공식}(variation of constants)이다. 첫 항은 초기 상태가 혼자서
+하는 일인 \emph{영입력 응답}(zero-input response)이고, 둘째 항은 \emph{영상태
+응답}(zero-state response)이다. 행렬 $e^{A(t-t_0)}$은 \emph{상태천이행렬}(state
+transition matrix)이다. 입력이 없을 때 이것이 시각 $t_0$의 상태를 시각 $t$의 상태로
+옮긴다, $x(t)=e^{A(t-t_0)}x(t_0)$. 적분은 입력에 대해 같은 말을 한다. 시각 $\tau$에
+가해진 작은 밀기 $Bu(\tau)\,\d\tau$가 $e^{A(t-\tau)}$에 실려 시각 $t$까지 옮겨지고,
+그 밀기들이 모두 더해진다.
+
+대신 $\dot x=Ax+Bu$를 라플라스 변환하면
+$X(s)=(sI-A)^{-1}x_0+(sI-A)^{-1}BU(s)$이고, 이는 \eqref{eq:voc}와 항별로 같다.
+시간 영역의 합성곱이 $s$ 영역의 곱이기 때문이다. 둘을 비교하면
+\begin{equation}\label{eq:laplaceexpm}
+   \Lap\{e^{At}\} = (sI-A)^{-1}.
+\end{equation}
+출력의 영상태 부분 $C(sI-A)^{-1}BU+DU$는 다시 한 번 \ref{sec:ss2tf}절의
+전달함수이고, 영입력 부분은 전달함수가 빠뜨리는 자유 응답이다.
+
+\subsection{모드: 대각화로 풀기}\label{sec:modes}
+$A=V\Lambda V^{-1}$이 대각화 가능하면 \ref{sec:diag}절의 좌표 $z=V^{-1}x$로
+바꾼다. 그러면 $\dot z=\Lambda z$는 따로따로인 $n$개의 스칼라 방정식
+$\dot z_i=\lambda_iz_i$이므로 $z_i(t)=e^{\lambda_it}z_i(0)$이고, 되돌아가면
+\begin{equation}\label{eq:modal}
+   x(t) = Vz(t) = z_1(0)\,e^{\lambda_1t}\,v_1 + \dots + z_n(0)\,e^{\lambda_nt}\,v_n .
+\end{equation}
+각 항이 하나의 \emph{모드}(mode)다. 고정된 방향 $v_i$에 스칼라 지수함수가 곱해진
+것이다. 고유벡터는 방향을, 고윳값은 그 성분이 얼마나 빨리 자라거나 줄어드는지를,
+초기조건은 각 모드가 얼마만큼 들어 있는지를 정한다(그림~\ref{fig:modes}). 같은
+공식을 좌표 없이 쓰면 \emph{좌고유벡터}(left eigenvector) $w_i\tp$가 쓰인다.
+$V^{-1}$의 행들로, $w_i\tp A=\lambda_iw_i\tp$와 $w_i\tp v_j=\delta_{ij}$를
+만족한다.
+\begin{equation}\label{eq:expmdyad}
+   e^{At} = Ve^{\Lambda t}V^{-1} = \sum_{i=1}^{n} e^{\lambda_it}\,v_iw_i\tp ,
+   \qquad z_i(0) = w_i\tp x_0 .
+\end{equation}
+그러니 $e^{At}$는 모드마다 하나씩, 계수가 1인 행렬들의 합이다.
+
+\begin{keybox}
+\textbf{$\dot x=Ax$의 안정도.} 모든 초기 상태에서 $x(t)\to0$일 필요충분조건은 $A$의
+모든 고윳값의 실수부가 엄격히 음수인 것이다.
+\end{keybox}
+대각화 가능한 $A$에서는 \eqref{eq:modal}에서 이것이 보인다. 복소쌍
+$\sigma\pm j\omega$는 $e^{\sigma t}$에 주파수 $\omega$의 회전을 곱한 것을 내놓고,
+모든 항이 사라지는 것은 정확히 모든 $\operatorname{Re}\lambda_i<0$일 때다.
+\ref{sec:jordanresp}절에서 이 명제가 대각화 가능성 없이도 살아남음을 보인다. 이것은
+정의~\ref{def:stable}의 안정한 플랜트 조건의 상태공간판 쌍둥이이고, (약분이 없다면)
+$A$의 고윳값이 $P$의 극점이므로 둘은 같은 말을 한다.
+
+\begin{figure}[htb]
+\centering
+\begin{tikzpicture}[>=Stealth,scale=1.35]
+  \draw[->,gray] (-1.4,0) -- (2.6,0) node[right,lbl] {$x_1$};
+  \draw[->,gray] (0,-0.9) -- (0,2.8) node[above,lbl] {$x_2$};
+  \draw[dashed,gray] (-1.2,-0.48) -- (2.5,1.0);
+  \draw[dashed,gray] (0.30,-0.86) -- (-0.92,2.63);
+  \draw[->,very thick] (0,0) -- (1,0.4) node[below right,lbl] {$v_1$};
+  \draw[->,very thick] (0,0) -- (-0.35,1) node[left,lbl] {$v_2$};
+  \draw[->] (0,0) -- (2,0.8) node[right,lbl] {$z_1(0)v_1$};
+  \draw[->] (0,0) -- (-0.525,1.5) node[left,lbl] {$z_2(0)v_2$};
+  \draw[dotted] (2,0.8) -- (1.475,2.3) -- (-0.525,1.5);
+  \fill (1.475,2.3) circle (1.4pt) node[above right,lbl] {$x(0)$};
+  \draw[thick] plot[domain=0:9,samples=90,smooth,variable=\t]
+    ({2*exp(-0.5*\t)-0.525*exp(-2*\t)},{0.8*exp(-0.5*\t)+1.5*exp(-2*\t)});
+  \pgfmathsetmacro{\ax}{2*exp(-0.5*0.45)-0.525*exp(-2*0.45)}
+  \pgfmathsetmacro{\ay}{0.8*exp(-0.5*0.45)+1.5*exp(-2*0.45)}
+  \pgfmathsetmacro{\bx}{2*exp(-0.5*0.55)-0.525*exp(-2*0.55)}
+  \pgfmathsetmacro{\by}{0.8*exp(-0.5*0.55)+1.5*exp(-2*0.55)}
+  \draw[->,thick] (\ax,\ay) -- (\bx,\by);
+  \fill (0,0) circle (1.2pt);
+\end{tikzpicture}
+\caption{고윳값 $\lambda_1=-0.5$, $\lambda_2=-2$로 그린 모드 분해. 초기 상태가
+고유벡터를 따라 나뉘고(점선 평행사변형), 각 성분은 제 고유벡터를 따라 제 속도로
+줄어든다. 빠른 모드 $v_2$가 먼저 사라지므로 궤적은 휘어서 느린 방향 $v_1$을 따라
+원점으로 들어온다.}
+\label{fig:modes}
+\end{figure}
+
+\begin{example}[행렬지수 하나, 세 가지 방법]\label{ex:expm3}
+$A=\begin{bmatrix}0&1\\-2&-3\end{bmatrix}$이라 하자.
+$\det(\lambda I-A)=\lambda^{2}+3\lambda+2=(\lambda+1)(\lambda+2)$이다.
+
+\emph{대각화로.} $\lambda_1=-1$에 고유벡터 $v_1=(1,-1)\tp$, $\lambda_2=-2$에
+$v_2=(1,-2)\tp$이므로
+\[
+   V=\begin{bmatrix}1&1\\-1&-2\end{bmatrix},\quad
+   V^{-1}=\begin{bmatrix}2&1\\-1&-1\end{bmatrix},\quad
+   e^{At}=e^{-t}\begin{bmatrix}2&1\\-2&-1\end{bmatrix}
+         +e^{-2t}\begin{bmatrix}-1&-1\\2&2\end{bmatrix}
+\]
+이고, 이는 \eqref{eq:expmdyad}의 계수 1인 두 조각 $v_1w_1\tp$와 $v_2w_2\tp$이다.
+
+\emph{라플라스로.} $(sI-A)^{-1}=\dfrac{1}{(s+1)(s+2)}\begin{bmatrix}s+3&1\\-2&s\end{bmatrix}$이고,
+성분마다 \ref{sec:pfe}절의 부분분수, 예컨대
+$\frac{s+3}{(s+1)(s+2)}=\frac{2}{s+1}-\frac{1}{s+2}$로 역변환하면 같은 행렬이 된다.
+
+\emph{케일리--해밀턴으로}(\ref{sec:cayley}절). $e^{At}=\alpha_0(t)I+\alpha_1(t)A$로
+쓰고 두 고윳값에서 $e^{\lambda t}=\alpha_0+\alpha_1\lambda$를 요구한다.
+$e^{-t}=\alpha_0-\alpha_1$, $e^{-2t}=\alpha_0-2\alpha_1$. 따라서
+$\alpha_1=e^{-t}-e^{-2t}$, $\alpha_0=2e^{-t}-e^{-2t}$이고,
+$\alpha_0I+\alpha_1A$는 다시 위의 행렬이다.
+\end{example}
+
+\subsection{고유벡터가 모자랄 때}\label{sec:jordanresp}
+조르당 표준형의 행렬에서는 분리가 불완전하지만 여전히 쉽다. \ref{sec:jordan}절의
+$3\times3$ $J$로 $\dot z=Jz$를 쓰면
+\[
+   \dot z_1=\lambda_1z_1,\qquad \dot z_2=\lambda_2z_2+z_3,\qquad \dot z_3=\lambda_2z_3 .
+\]
+첫째와 셋째는 앞에서처럼 푼다. 가운데 것은 $z_3$이 몰고 가는데, $n=1$인
+\eqref{eq:voc}에 따라
+\[
+   z_2(t) = e^{\lambda_2t}z_2(0)+\int_0^{t}e^{\lambda_2(t-\tau)}e^{\lambda_2\tau}z_3(0)\,\d\tau
+          = e^{\lambda_2t}z_2(0) + t\,e^{\lambda_2t}z_3(0).
+\]
+따라서
+\[
+   x(t) = z_1(0)e^{\lambda_1t}v_1 + \bigl(z_2(0)e^{\lambda_2t}+z_3(0)\,t\,e^{\lambda_2t}\bigr)v_2
+          + z_3(0)e^{\lambda_2t}v_3
+\]
+이고, 블록 하나 $J_2(\lambda)$에서는 $e^{J_2t}=e^{\lambda t}\begin{bmatrix}1&t\\0&1\end{bmatrix}$이다.
+조르당 블록은 지수함수 앞에 인수 $t$를 데려온다. \ref{sec:pfe}절에서 중근 극점이
+데려온 바로 그 $t$다. $\operatorname{Re}\lambda<0$이면 언제나
+$t^{k}e^{\lambda t}\to0$이므로 위의 안정도 판정은 모든 정방 행렬에서 성립한다.
+
+\subsection{케일리--해밀턴 정리}\label{sec:cayley}
+\begin{theorem}[케일리--해밀턴]
+모든 정방 행렬은 자기 자신의 특성방정식을 만족한다.
+$p(\lambda)=\det(\lambda I-A)=\lambda^{n}+a_{n-1}\lambda^{n-1}+\dots+a_0$이면
+\[
+   p(A) = A^{n}+a_{n-1}A^{n-1}+\dots+a_1A+a_0I = 0 .
+\]
+\end{theorem}
+\begin{proof}[개요]
+$A=V\Lambda V^{-1}$이면 $A^{k}=V\Lambda^{k}V^{-1}$이므로
+\[
+   p(A)=V\,p(\Lambda)\,V^{-1},\qquad
+   p(\Lambda)=\diag\bigl(p(\lambda_1),\dots,p(\lambda_n)\bigr)=0
+\]
+이다. 각 $\lambda_i$가 근이기 때문이다. 일반적인 $A$에서는 같은 논증을 조르당
+표준형에서 블록별로 하면 된다. 거기서 $p$는 각 $k\times k$ 블록을 소멸시킬 만큼 큰
+인수 $(\lambda-\lambda_i)^{k}$를 품고 있다.
+\end{proof}
+그 결과로 $A^{n}$은 $I,A,\dots,A^{n-1}$의 조합이고, 따라서 $A^{n+1}=A\cdot A^{n}$도
+그렇고, 계속 그렇다. \emph{$A$의 모든 다항식은 차수가 $n-1$ 이하인 다항식으로
+줄어들고}, 수렴하는 모든 멱급수도 마찬가지다. 특히 예제~\ref{ex:expm3}에서 쓴 대로
+$e^{At}=\alpha_0(t)I+\alpha_1(t)A+\dots+\alpha_{n-1}(t)A^{n-1}$이다. 고윳값이 모두
+다르면 계수는 $n$개의 스칼라 방정식 $e^{\lambda_it}=\sum_k\alpha_k(t)\lambda_i^{k}$에서
+나온다.
+
+\begin{example}[행렬 다항식 줄이기]
+$A=\begin{bmatrix}2&1\\1&2\end{bmatrix}$이라 하면 $p(\lambda)=\lambda^{2}-4\lambda+3$이고
+$A^{2}=4A-3I$이다. 그러면 $A^{3}=4A^{2}-3A=13A-12I$, $A^{4}=13A^{2}-12A=40A-39I$이므로
+\[
+   A^{4}+3A^{3}+A^{2}+I = 83A-77I .
+\]
+같은 이치로 어떤 두 수 $a,b$에 대해 $A^{10000}=aA+bI$이다. 스칼라 항등식
+$\lambda^{10000}=a\lambda+b$를 고윳값 $1$과 $3$에서 계산하면
+$a=\frac{3^{10000}-1}{2}$, $b=\frac{3-3^{10000}}{2}$이다.
+\end{example}
+
+\begin{remark}[$e^{At}$를 계산하는 네 가지 방법]
+급수 정의; $(sI-A)^{-1}$의 역라플라스 변환 \eqref{eq:laplaceexpm}; $A$가 대각화
+가능할 때의 모드 합 $\sum_ie^{\lambda_it}v_iw_i\tp$(가능하지 않으면 조르당 표준형으로);
+그리고 차수 $n-1$의 케일리--해밀턴 다항식. 이들은 한 대상을 보는 네 관점이고,
+예제~\ref{ex:expm3}는 그중 셋을 서로 맞대어 확인한다.
+\end{remark}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{양의 정부호와 특이값 분해}\label{sec:svd}
+
+\subsection{이차형식과 양의 정부호 행렬}\label{sec:pd}
+\emph{이차형식}(quadratic form)은 정방 행렬 $P$에 대한 $x\tp Px$다. $x\tp Px$는
+스칼라이므로 자기 전치 $x\tp P\tp x$와 같고, 그래서 $P$의 대칭 부분만 기여한다.
+\[
+   x\tp Px = x\tp\Bigl(\tfrac{P+P\tp}{2}\Bigr)x .
+\]
+그러므로 $P=P\tp$로 두어도 잃는 것이 없다.
+\begin{definition}[양의 정부호]
+대칭행렬 $P$가 모든 $x\neq0$에 대해 $x\tp Px>0$이면 \emph{양의 정부호}(positive
+definite)라 하고 $P\succ0$으로 쓰며, 모든 $x$에 대해 $x\tp Px\ge0$이면 \emph{양의
+준정부호}(positive semidefinite)라 하고 $P\succeq0$으로 쓴다.
+\end{definition}
+양의 정부호 행렬은 크기를 재는 행렬이다. 에너지, 비용, 거리의 제곱은 모두 이런
+이차형식이다.
+
+\begin{proposition}[두 가지 판정법]\label{prop:pdtests}
+$P=P\tp\in\R^{n\times n}$에 대해 다음은 동치다.
+\begin{enumerate}[label=(\alph*),itemsep=2pt]
+\item $P\succ0$;
+\item $P$의 모든 고윳값이 양수다;
+\item 열 완전 계수인 어떤 $L$에 대해 $P=L\tp L$이다.
+\end{enumerate}
+\end{proposition}
+\begin{proof}
+정리~\ref{thm:spectral}에 따라 $P=V\Lambda V\tp$이므로 $y=V\tp x$로 두면
+$x\tp Px=y\tp\Lambda y=\sum_i\lambda_iy_i^{2}$이다. $x$가 영 아닌 벡터 전체를 움직이면
+$y$도 그렇고, 그 모두에서 합이 양수인 것은 정확히 모든 $\lambda_i>0$일 때다:
+(a)$\Leftrightarrow$(b). $P=L\tp L$이면 $x\tp Px=\|Lx\|^{2}\ge0$이고, 등호는
+$Lx=0$일 때만, 곧 $\mathcal N(L)=\{0\}$이면 $x=0$일 때만 성립한다:
+(c)$\Rightarrow$(a). 거꾸로, (b)이면 $L=\Lambda^{1/2}V\tp$로 잡을 수 있다.
+\end{proof}
+준정부호는 ``양수''를 ``음이 아닌 수''로 바꾸고 $L$의 계수 조건을 빼면 같다.
+기하학적으로, $P\succ0$이면 등위집합 $x\tp Px=1$은 축이 $P$의 고유벡터 방향이고
+$v_i$ 방향의 반축이 $1/\sqrt{\lambda_i}$인 타원체다.
+$P=\begin{bmatrix}2&1\\1&2\end{bmatrix}$의 고윳값은 $1$과 $3$이므로 $P\succ0$이고,
+$2x_1^{2}+2x_1x_2+2x_2^{2}=1$은 긴 축이 $(1,-1)$ 방향인 타원이다.
+
+\subsection{네 기본 부분공간}\label{sec:foursub}
+계수가 $r$인 모든 $A\in\R^{m\times n}$은 \emph{네 기본 부분공간}(four fundamental
+subspaces)을 가진다. $A$가 잇는 두 공간에 둘씩이다.
+\begin{center}\small
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{}llll@{}}
+\toprule
+부분공간 & 속한 공간 & 차원 & 이름\\
+\midrule
+$\mathcal R(A\tp)$ & $\R^{n}$ & $r$   & 행공간\\
+$\mathcal N(A)$    & $\R^{n}$ & $n-r$ & 영공간\\
+$\mathcal R(A)$    & $\R^{m}$ & $r$   & 열공간\\
+$\mathcal N(A\tp)$ & $\R^{m}$ & $m-r$ & 왼쪽 영공간\\
+\bottomrule
+\end{tabular}
+\end{center}
+여기서 $\mathcal R(A\tp)$를 \emph{행공간}(row space), $\mathcal N(A\tp)$를
+\emph{왼쪽 영공간}(left null space)이라 한다. 짝을 이루는 두 공간은 차원이 서로
+보완적일 뿐 아니라 서로 수직이다. $Ax=0$이고 $y=A\tp z$이면 $y\tp x=z\tp Ax=0$이므로
+\[
+   \mathcal N(A)\perp\mathcal R(A\tp),\qquad\text{마찬가지로}\qquad
+   \mathcal N(A\tp)\perp\mathcal R(A).
+\]
+그러므로 모든 $x\in\R^{n}$은 행공간의 $x_r$과 영공간의 $x_n$으로 $x=x_r+x_n$처럼
+유일하게 갈라지고, $Ax=Ax_r$이다. 영공간 부분은 사라지고, $A$는 행공간을 열공간 위로
+일대일로 옮긴다(그림~\ref{fig:foursub}).
+
+\begin{figure}[htb]
+\centering
+\begin{tikzpicture}[>=Stealth,scale=1.15]
+  % ---- R^n ----
+  \node[lbl] at (-1.7,1.9) {$\R^{n}$};
+  \draw[thick] ($(0,0)+(215:1.3)$) -- ($(0,0)+(35:2.0)$);
+  \draw[thick] ($(0,0)+(125:1.5)$) -- ($(0,0)+(305:1.4)$);
+  \draw ($(35:0.18)$) -- ($(35:0.18)+(125:0.18)$) -- ($(125:0.18)$);
+  \node[lbl,anchor=south west] at (35:2.0) {$\mathcal R(A\tp)$, 차원 $r$};
+  \node[lbl,anchor=south east] at (125:1.5) {$\mathcal N(A)$, 차원 $n-r$};
+  \fill (0,0) circle (1.2pt);
+  \fill (35:1.35) circle (1.4pt) node[above left,lbl] {$x_r$};
+  \fill (305:1.0) circle (1.4pt) node[left,lbl] {$x_n$};
+  % ---- R^m ----
+  \begin{scope}[shift={(6.2,0)}]
+    \node[lbl] at (2.1,1.9) {$\R^{m}$};
+    \draw[thick] ($(215:1.4)$) -- ($(35:2.0)$);
+    \draw[thick] ($(125:1.3)$) -- ($(305:1.4)$);
+    \draw ($(35:0.18)$) -- ($(35:0.18)+(125:0.18)$) -- ($(125:0.18)$);
+    \node[lbl,anchor=south west] at (35:2.0) {$\mathcal R(A)$, 차원 $r$};
+    \node[lbl,anchor=north west] at (305:1.4) {$\mathcal N(A\tp)$, 차원 $m-r$};
+    \fill (0,0) circle (1.2pt) node[below left,lbl] {$0$};
+    \fill (35:1.55) circle (1.4pt) node[above left,lbl] {$Ax_r$};
+  \end{scope}
+  \draw[->] ($(35:1.35)+(0.08,0.02)$) to[bend left=12]
+        node[above,lbl] {$A$} ($(6.2,0)+(35:1.55)+(-0.08,0)$);
+  \draw[->] ($(305:1.0)+(0.08,-0.02)$) to[bend right=14]
+        node[below,lbl] {$A$} ($(6.2,0)+(-0.06,-0.04)$);
+\end{tikzpicture}
+\caption{$A\in\R^{m\times n}$의 네 기본 부분공간. 각각을 직선 하나로 그렸다.
+$\R^{n}$에서 행공간과 영공간이 수직이고, $\R^{m}$에서 열공간과 왼쪽 영공간이
+수직이다. $A$는 벡터의 행공간 부분 $x_r$을 열공간 위로 일대일로 옮기고, 영공간
+부분 $x_n$은 $0$으로 보낸다.}
+\label{fig:foursub}
+\end{figure}
+
+$A$와 대칭행렬 $A\tp A$를 잇는 사실이 하나 더 있다.
+\begin{equation}\label{eq:nullata}
+   \mathcal N(A\tp A) = \mathcal N(A),\qquad\text{따라서}\qquad \rank(A\tp A)=\rank A .
+\end{equation}
+$Ax=0$이면 $A\tp Ax=0$인 것은 분명하다. 거꾸로 $A\tp Ax=0$이면
+$0=x\tp A\tp Ax=\|Ax\|^{2}$이므로 $Ax=0$이다. 특히 $A\tp A$가 가역인 것은 정확히 $A$가
+열 완전 계수일 때이고, 그때 $L=A$로 둔 명제~\ref{prop:pdtests}(c)에 따라
+$A\tp A\succ0$이다. 어느 경우든 $A\tp A\succeq0$이다.
+
+\subsection{특이값 분해}\label{sec:svdthm}
+고유벡터는 정방 행렬에서만 뜻이 있고, 그때조차 직교한다는 보장도, 개수가 넉넉하다는
+보장도 없다. \emph{특이값 분해}(singular value decomposition, SVD)는 이 모든 것을
+모든 행렬에 대해 한꺼번에 바로잡는다.
+\begin{theorem}[SVD]\label{thm:svd}
+계수가 $r$인 모든 $A\in\R^{m\times n}$은
+\[
+   A = U\Sigma V\tp
+\]
+로 쓸 수 있다. 여기서 $U\in\R^{m\times m}$과 $V\in\R^{n\times n}$은 직교행렬($U\tp U=I$,
+$V\tp V=I$)이고, $\Sigma\in\R^{m\times n}$은 대각 성분
+$\sigma_1\ge\sigma_2\ge\dots\ge\sigma_r>0$을 빼고는 $0$이다. $\sigma_i$를
+\emph{특이값}(singular value), $V$의 열 $v_i$를 오른쪽 \emph{특이벡터}(singular
+vector), $U$의 열 $u_i$를 왼쪽 특이벡터라 한다. 같은 말로
+\begin{equation}\label{eq:svddyad}
+   A = \sum_{i=1}^{r}\sigma_i\,u_iv_i\tp ,\qquad Av_i=\sigma_iu_i,\qquad A\tp u_i=\sigma_iv_i .
+\end{equation}
+\end{theorem}
+\begin{proof}[구성]
+$A\tp A$는 대칭이고 양의 준정부호이므로 정리~\ref{thm:spectral}에 따라 고윳값
+$\lambda_1\ge\dots\ge\lambda_n\ge0$에 속하는 정규직교 고유벡터 $v_1,\dots,v_n$을
+가지며, \eqref{eq:nullata}에 따라 그중 정확히 $r$개가 양수다. $i\le r$에 대해
+$\sigma_i=\sqrt{\lambda_i}$, $u_i=Av_i/\sigma_i$로 두자. 이들은 정규직교다.
+\[
+   u_i\tp u_j=\frac{v_i\tp A\tp Av_j}{\sigma_i\sigma_j}
+            =\frac{\lambda_j\,v_i\tp v_j}{\sigma_i\sigma_j}=\delta_{ij}.
+\]
+$u_1,\dots,u_r$을 $\R^{m}$의 정규직교 기저로 채운다. 그러면 열마다 $AV=U\Sigma$이고
+($i>r$이면 그 $v_i$가 $\mathcal N(A\tp A)=\mathcal N(A)$에 있으므로 $Av_i=0$),
+오른쪽에 $V\tp$를 곱하면 $A=U\Sigma V\tp$이다.
+\end{proof}
+그러므로 특이값은
+\[
+   \sigma_i(A) = \sqrt{\lambda_i(A\tp A)}
+\]
+이고, 특이벡터는 \ref{sec:foursub}절의 네 부분공간 모두의 정규직교 기저를 한꺼번에
+준다. $v_1,\dots,v_r$은 행공간을, $v_{r+1},\dots,v_n$은 영공간을 생성하고,
+$u_1,\dots,u_r$은 열공간을, $u_{r+1},\dots,u_m$은 왼쪽 영공간을 생성한다. 계수는 영
+아닌 특이값의 개수다. 합 \eqref{eq:svddyad}는 \ref{sec:vspace}절의 읽기 (iii)
+$AB=\sum a_ib_i\tp$에서 인수들을 정규직교로 고르고 크기순으로 늘어놓은 것이다.
+
+\begin{example}[$2\times2$ SVD]\label{ex:svd}
+$A=\begin{bmatrix}3&0\\4&5\end{bmatrix}$이라 하자. 그러면
+$A\tp A=\begin{bmatrix}25&20\\20&25\end{bmatrix}$이고, 고윳값은 $45$와 $5$,
+고유벡터는 $v_1=\tfrac{1}{\sqrt2}(1,1)\tp$, $v_2=\tfrac1{\sqrt2}(1,-1)\tp$이다.
+그러므로 $\sigma_1=3\sqrt5\approx6.71$, $\sigma_2=\sqrt5\approx2.24$이고
+\[
+   u_1=\frac{Av_1}{\sigma_1}=\frac{1}{\sqrt{10}}\begin{bmatrix}1\\3\end{bmatrix},\qquad
+   u_2=\frac{Av_2}{\sigma_2}=\frac{1}{\sqrt{10}}\begin{bmatrix}3\\-1\end{bmatrix}
+\]
+이며, 실제로 직교한다. 확인해 보면
+$\sigma_1u_1v_1\tp+\sigma_2u_2v_2\tp=\tfrac32\begin{bmatrix}1&1\\3&3\end{bmatrix}
++\tfrac12\begin{bmatrix}3&-3\\-1&1\end{bmatrix}=A$이고
+$\sigma_1\sigma_2=15=|\det A|$이다. $A$의 고윳값은 $3$과 $5$로, 특이값이 아니다.
+대칭이 아닌 행렬에서 둘은 서로 다른 대상이고, 대칭행렬에서는 특이값이 고윳값의
+절댓값이다.
+\end{example}
+
+\subsection{특이값이 재는 것}\label{sec:svduse}
+$A=U\Sigma V\tp$를 오른쪽에서 왼쪽으로 읽자. $V\tp$는 입력을 회전시키고(직교행렬이므로
+길이를 보존한다), $\Sigma$는 $i$번째 좌표를 $\sigma_i$배로 늘이며, $U$는 그 결과를
+회전시킨다. 그러므로 $A$는 단위 구를 반축이 $\sigma_iu_i$인 타원체 위로 옮기고, 그
+축에 떨어지는 입력 방향이 $v_i$다(그림~\ref{fig:svd}).
+
+\begin{figure}[htb]
+\centering
+\begin{tikzpicture}[>=Stealth]
+  % ---- input: unit circle ----
+  \begin{scope}[scale=1.15]
+    \draw[->,gray] (-1.5,0) -- (1.6,0); \draw[->,gray] (0,-1.5) -- (0,1.6);
+    \draw[thick] (0,0) circle (1);
+    \draw[->,very thick] (0,0) -- (45:1) node[above right,lbl] {$v_1$};
+    \draw[->,very thick] (0,0) -- (-45:1) node[below right,lbl] {$v_2$};
+    \node[lbl] at (-1.15,1.35) {$\|x\|=1$};
+  \end{scope}
+  \draw[->,thick] (2.2,0.35) -- node[above,sig] {$A$} (3.4,0.35);
+  % ---- output: ellipse A(circle) ----
+  \begin{scope}[xshift=5.6cm,scale=0.33]
+    \draw[->,gray] (-4.6,0) -- (4.8,0); \draw[->,gray] (0,-7.2) -- (0,7.6);
+    \draw[thick] plot[domain=0:360,samples=120,smooth,variable=\a]
+      ({3*cos(\a)},{4*cos(\a)+5*sin(\a)});
+    \draw[->,very thick] (0,0) -- (2.121,6.364) node[right,lbl] {$\sigma_1u_1$};
+    \draw[->,very thick] (0,0) -- (2.121,-0.707) node[right,lbl] {$\sigma_2u_2$};
+  \end{scope}
+\end{tikzpicture}
+\caption{예제~\ref{ex:svd}의 SVD를 그림으로. 단위원(왼쪽)이 $A$에 실려 반축
+$\sigma_1u_1$, $\sigma_2u_2$(길이 $3\sqrt5$, $\sqrt5$)를 가진 타원(오른쪽, 축척
+3분의 1로 그림) 위로 옮겨진다. 입력 방향 $v_1$과 $v_2$가 그 축에 떨어지는
+방향이다.}
+\label{fig:svd}
+\end{figure}
+
+여기서 쓸모 있는 수 몇 가지가 바로 나온다.
+\begin{itemize}[leftmargin=*,itemsep=2pt]
+\item \textbf{이득.} 모든 $x\neq0$에 대해
+$\sigma_{\min}\le\|Ax\|/\|x\|\le\sigma_1$이다($A$가 열 완전 계수이면
+$\sigma_{\min}=\sigma_n$, 아니면 $0$). 가장 큰 증폭은 $\sigma_1$이고 $x$가 $v_1$
+방향일 때 얻어진다. 이것이 \emph{유도 $2$-노름}(induced $2$-norm)
+$\|A\|_2=\sigma_1$이다. 그러니 특이값은 행렬이 얼마나 증폭할 수 있는지, 어느 입력
+방향에서 그런지를 알려 준다. 고윳값이 각 모드가 얼마나 빨리 변하는지를 알려 주는
+것과 대비된다.
+\item \textbf{조건.} 비 $\kappa(A)=\sigma_1/\sigma_r$이 \emph{조건수}(condition
+number)다. 이것이 크면 어떤 입력 방향은 다른 방향보다 훨씬 크게 증폭되고, $Ax=b$를
+풀 때 $b$의 오차가 최대 $\kappa$배까지 커진다. 서류상으로는 가역이지만 $\sigma_r$이
+아주 작은 행렬은 수치적으로는 거의 계수가 모자란 행렬이다.
+\item \textbf{저계수 근사.} \eqref{eq:svddyad}를 $k$개 항에서 자른
+$A_k=\sum_{i\le k}\sigma_iu_iv_i\tp$는 $A$에 가장 가까운 계수 $k$의 행렬이고, 오차는
+$\|A-A_k\|_2=\sigma_{k+1}$이다. 이것이 \emph{저계수 근사}(low-rank
+approximation)다. 가장 강한 방향만 남길 때 얼마나 잃는지를 특이값이 정확히 알려 준다.
+\end{itemize}
+
+\begin{remark}[최소제곱]
+$Ax=b$의 해가 없을 때($b\notin\mathcal R(A)$)에도 SVD는 할 수 있는 최선을 준다.
+\emph{유사역행렬}(pseudo-inverse) $A^{+}=V\Sigma^{+}U\tp$, 여기서 $\Sigma^{+}$는 영
+아닌 특이값을 역수로 바꾸고 모양을 전치한 것인데, 이것이 주는 $x=A^{+}b$는
+$\|Ax-b\|$를 최소로 만들고, 그런 최소화 해 가운데 노름이 가장 작다. 이것이
+\emph{최소제곱}(least squares) 해다. $A$가 열 완전 계수이면
+$A^{+}=(A\tp A)^{-1}A\tp$이고, \eqref{eq:nullata}에 따라 $A\tp A$는 가역이다.
+\end{remark}
+
+\end{document}

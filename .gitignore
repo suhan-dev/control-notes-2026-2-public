@@ -1,0 +1,15 @@
+# LaTeX 보조 파일
+*.aux
+*.log
+*.out
+*.toc
+*.synctex.gz
+
+# 루트에 빌드된 PDF (배포본은 docs/ 에 있는 것을 씁니다)
+/control_notes_EN.pdf
+/control_notes_KR.pdf
+
+.DS_Store
+
+# python
+__pycache__/

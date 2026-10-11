@@ -1,0 +1,382 @@
+%% ---------------------------------------------------------------------------
+%%  controlnotes.sty  --  MIT-scribe style lecture notes
+%%  Introduction to Control Engineering, 2026 Fall
+%%
+%%  Usage:  \usepackage{controlnotes}            % English
+%%          \usepackage[korean]{controlnotes}    % Korean
+%%
+%%  BOTH editions are compiled with XeLaTeX.  The two .tex files used to carry
+%%  a duplicated preamble each -- one built for pdflatex, one for xelatex --
+%%  which is how they drifted apart; everything shared now lives here.
+%%
+%%  Layout, headings, boxes and macros follow grnotes.sty (General Relativity,
+%%  2026 Fall), which is the house standard.  Only the block-diagram TikZ
+%%  styles and the four course macros at the bottom are proper to control
+%%  engineering.
+%%
+%%  Monochrome by design: everything prints black on white.
+%% ---------------------------------------------------------------------------
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{controlnotes}[2026/09/19 v1.0 Control lecture-note style]
+
+\newif\ifctl@korean \ctl@koreanfalse
+\DeclareOption{korean}{\ctl@koreantrue}
+\DeclareOption{english}{\ctl@koreanfalse}
+\ProcessOptions\relax
+
+% ------------------------------------------------------------------ layout --
+\RequirePackage[letterpaper,margin=1in,headheight=15pt,headsep=18pt]{geometry}
+\RequirePackage{amsmath,amssymb,amsthm,mathtools}
+\RequirePackage{bm}
+\RequirePackage{graphicx}
+\RequirePackage{booktabs}
+\RequirePackage{enumitem}
+\RequirePackage{fancyhdr}
+\RequirePackage{xcolor}
+\RequirePackage{mdframed}
+\RequirePackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,calc,fit,
+                decorations.pathreplacing,decorations.pathmorphing,patterns}
+\RequirePackage{cancel}
+\RequirePackage{microtype}
+
+% ------------------------------------------------------------------- fonts --
+\RequirePackage{fontspec}
+% fontspec's own default (Latin Modern, shipped with TeX Live) is used for the
+% Latin script -- no \setmainfont needed, and it avoids depending on the fonts
+% being registered with the OS font manager.
+
+\ifctl@korean
+  \RequirePackage[hangul]{xetexko}
+  \setmainhangulfont{Nanum Myeongjo}[Script=Hangul,AutoFakeSlant=0.2]
+  \setsanshangulfont{Nanum Gothic}[Script=Hangul]
+  \setmonohangulfont{Nanum Gothic}[Script=Hangul]
+\fi
+
+% Links stay black: these notes are meant to be read and printed on paper.
+% bookmarksnumbered: article writes its ToC entries as \numberline{1}{...}, and
+% hyperref drops that number from the bookmark unless asked to keep it.  The web
+% viewer keys on the section number to carry your place across the EN/KO switch
+% (the two editions have different page counts, the numbering is the same), so
+% the bookmarks have to read "5.3 Poles, zeros, and properness", not just the
+% title.
+\RequirePackage[colorlinks=true,linkcolor=black,citecolor=black,
+                urlcolor=black,filecolor=black,
+                bookmarksnumbered=true]{hyperref}
+
+% ----------------------------------------------------------- course fields --
+% Same field set and the same names as grnotes.sty.  Nothing here had to be
+% renamed: this course's own macros are \R, \Lap, \tp and \Dop, so \scribe,
+% \term, \lecturer and the rest were all free.
+\let\ctl@course\@empty   \let\ctl@courseno\@empty \let\ctl@term\@empty
+\let\ctl@lecnum\@empty   \let\ctl@lectitle\@empty \let\ctl@date\@empty
+\let\ctl@lecturer\@empty \let\ctl@scribe\@empty
+
+\newcommand{\coursename}[1]{\def\ctl@course{#1}}
+\newcommand{\courseno}[1]{\def\ctl@courseno{#1}}
+\newcommand{\term}[1]{\def\ctl@term{#1}}
+\newcommand{\lecnum}[1]{\def\ctl@lecnum{#1}}
+\newcommand{\lectitle}[1]{\def\ctl@lectitle{#1}}
+\newcommand{\lecdate}[1]{\def\ctl@date{#1}}
+\newcommand{\lecturer}[1]{\def\ctl@lecturer{#1}}
+\newcommand{\scribe}[1]{\def\ctl@scribe{#1}}
+
+% -------------------------------------------------------------- localisation -
+\ifctl@korean
+  \def\ctl@defword{정의}
+  \def\ctl@thmword{정리}
+  \def\ctl@lemword{보조정리}
+  \def\ctl@propword{명제}
+  \def\ctl@corword{따름정리}
+  \def\ctl@remword{보충}
+  \def\ctl@noteword{참고}
+  \def\ctl@exword{예제}
+  \def\ctl@exerword{연습}
+  \def\ctl@qword{질문}
+  \def\ctl@cautionword{주의}
+  \def\ctl@proofword{증명}
+  \def\ctl@lecword{강의}
+  \def\ctl@lecturerword{강의}
+  \def\ctl@scribeword{정리}
+  \renewcommand{\contentsname}{목차}
+  \renewcommand{\figurename}{그림}
+  \renewcommand{\tablename}{표}
+  \renewcommand{\appendixname}{부록}
+\else
+  \def\ctl@defword{Definition}
+  \def\ctl@thmword{Theorem}
+  \def\ctl@lemword{Lemma}
+  \def\ctl@propword{Proposition}
+  \def\ctl@corword{Corollary}
+  \def\ctl@remword{Remark}
+  \def\ctl@noteword{Note}
+  \def\ctl@exword{Example}
+  \def\ctl@exerword{Exercise}
+  \def\ctl@qword{Question}
+  \def\ctl@cautionword{Warning}
+  \def\ctl@proofword{Proof}
+  \def\ctl@lecword{Lecture}
+  \def\ctl@lecturerword{Lecturer}
+  \def\ctl@scribeword{Notes}
+\fi
+
+% ------------------------------------------------------------- the header ----
+% Reproduces the MIT scribe-note masthead of grnotes.sty:
+%   <course no. + name (term)>                                          <date>
+%   ==========================================================================
+%                        Lecture N: <title>
+%   ==========================================================================
+%   Lecturer: ...                                            Notes: ...
+% These notes are one continuous document, so \lecnum and \lecturer are left
+% empty; the centred line carries the title of the notes and the range of
+% lectures folded into them, and the top line carries course + term.
+\newcommand{\ctl@coursehead}{%
+  \ifx\ctl@courseno\@empty\else\ctl@courseno\ \fi\ctl@course
+  \ifx\ctl@term\@empty\else\ (\ctl@term)\fi}
+
+\newcommand{\ctl@bylineline}{%
+  \noindent\begin{minipage}{\textwidth}%
+    \normalsize
+    \ifx\ctl@lecturer\@empty\else\textit{\ctl@lecturerword:}~\ctl@lecturer\fi
+    \hfill
+    \ifx\ctl@scribe\@empty\else\textit{\ctl@scribeword:}~\ctl@scribe\fi
+  \end{minipage}\\[2pt]}
+
+\newcommand{\makelecheader}{%
+  \thispagestyle{plain}%
+  \vspace*{-0.40in}%
+  \noindent\begin{minipage}{\textwidth}%
+    \normalsize\ctl@coursehead\hfill\ctl@date%
+  \end{minipage}\\[3pt]
+  \noindent\rule{\textwidth}{1.1pt}\\[-9.5pt]
+  \noindent\rule{\textwidth}{0.4pt}\\[5pt]
+  \noindent\begin{minipage}{\textwidth}\centering
+    {\large\bfseries
+      \ifx\ctl@lecnum\@empty\else\ctl@lecword\ \ctl@lecnum: \fi\ctl@lectitle}%
+  \end{minipage}\\[6pt]
+  \noindent\rule{\textwidth}{0.4pt}\\[-9.5pt]
+  \noindent\rule{\textwidth}{1.1pt}\\[4pt]
+  \ifx\ctl@lecturer\@empty\ifx\ctl@scribe\@empty\else\ctl@bylineline\fi
+  \else\ctl@bylineline\fi
+  \vspace{1.1em}
+  \pagestyle{fancy}%
+  \fancyhf{}%
+  \fancyhead[L]{\small
+    \ifx\ctl@lecnum\@empty\else\ctl@lecword\ \ctl@lecnum: \fi\ctl@lectitle}%
+  \fancyhead[R]{\small\ctl@date}%
+  \fancyfoot[C]{\small\thepage}%
+  \renewcommand{\headrulewidth}{0.4pt}%
+}
+
+% -------------------------------------------------------- theorem-like envs --
+% Master counter is `definition', as in grnotes.sty; everything else shares it.
+\theoremstyle{definition}
+\newtheorem{definition}{\ctl@defword}[section]
+\newtheorem{example}[definition]{\ctl@exword}
+\newtheorem{exercise}[definition]{\ctl@exerword}
+\newtheorem{question}[definition]{\ctl@qword}
+\newtheorem{warninner}[definition]{\ctl@cautionword}
+\theoremstyle{plain}
+\newtheorem{theorem}[definition]{\ctl@thmword}
+\newtheorem{lemma}[definition]{\ctl@lemword}
+\newtheorem{proposition}[definition]{\ctl@propword}
+\newtheorem{corollary}[definition]{\ctl@corword}
+\theoremstyle{remark}
+\newtheorem{remark}[definition]{\ctl@remword}
+\newtheorem{note}[definition]{\ctl@noteword}
+\renewcommand{\proofname}{\ctl@proofword}
+
+% ------------------------------------------------------------- boxed notes --
+% Both boxes are black-on-white and are told apart by their RULES, not colour:
+%   caution/warning -- a heavy rule down the left margin, nothing else;
+%   keybox          -- a thin closed frame.
+% (The old tcolorbox `warnbox' had a black!4 wash behind it; the wash is gone.)
+
+\newmdenv[
+  topline=false,bottomline=false,rightline=false,
+  linecolor=black,linewidth=1.8pt,
+  backgroundcolor=white,
+  innertopmargin=4pt,innerbottommargin=4pt,
+  innerleftmargin=9pt,innerrightmargin=0pt,
+  skipabove=10pt,skipbelow=10pt
+]{ctl@cautionbox}
+
+% \begin{caution}[subject] ... -- unnumbered, byte-for-byte the grnotes one.
+\newenvironment{caution}[1][]{%
+  \begin{ctl@cautionbox}\noindent{\bfseries\ctl@cautionword%
+  \if\relax\detokenize{#1}\relax\else\ (#1)\fi.}\ \ignorespaces
+}{\end{ctl@cautionbox}}
+
+% \begin{warning}[subject] ... -- the same box, but NUMBERED.  grnotes' caution
+% carries no number; here Appendix A cross-references six of the eight boxes by
+% \ref, so the counter has to stay.  Same rule, same spacing, no background.
+\NewDocumentEnvironment{warning}{o}
+  {\begin{ctl@cautionbox}%
+     \IfValueTF{#1}{\begin{warninner}[#1]}{\begin{warninner}}}
+  {\end{warninner}\end{ctl@cautionbox}}
+
+\newmdenv[
+  linecolor=black,linewidth=0.6pt,
+  backgroundcolor=white,
+  innertopmargin=7pt,innerbottommargin=7pt,
+  innerleftmargin=9pt,innerrightmargin=9pt,
+  skipabove=10pt,skipbelow=10pt
+]{keybox}
+
+% ---------------------------------------------------------------- appendices -
+% \notesappendix is \appendix plus the one thing \appendix does not do: it puts
+% the word Appendix/부록 in front of the letter in the printed heading.  The ToC
+% entry keeps the bare letter, because article's \l@section only reserves 1.5em
+% for the number.  The sections stay real \section's, so they are numbered,
+% land in the ToC, and get a numbered PDF bookmark.
+\newcommand{\notesappendix}{%
+  \appendix
+  \titleformat{\section}{\normalfont\large\bfseries}%
+    {\appendixname~\thesection}{0.7em}{}%
+}
+
+% ------------------------------------------------------------------ macros ---
+% --- shared with grnotes.sty ---
+\newcommand{\vv}[1]{\vec{#1}}
+\newcommand{\bs}[1]{\boldsymbol{#1}}
+\newcommand{\mat}[1]{\mathsf{#1}}
+\renewcommand{\d}{\mathrm{d}}
+\newcommand{\pd}[2]{\frac{\partial #1}{\partial #2}}
+\newcommand{\dv}[2]{\frac{\d #1}{\d #2}}
+\newcommand{\ddv}[2]{\frac{\d^{2} #1}{\d #2^{2}}}
+\newcommand{\T}{\mathsf{T}}
+\newcommand{\half}{\tfrac{1}{2}}
+\newcommand{\ie}{\textit{i.e.}}
+\newcommand{\eg}{\textit{e.g.}}
+\DeclareMathOperator{\diag}{diag}
+\DeclareMathOperator{\rank}{rank}
+\DeclareMathOperator{\Tr}{Tr}
+\DeclareMathOperator{\dete}{det}
+% --- proper to this course ---
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\Lap}{\mathcal{L}}          % Laplace transform
+\newcommand{\tp}{^{\mathsf{T}}}         % transpose, as a superscript
+\newcommand{\Dop}{\mathrm{D}}           % the derivative operator Df
+% NB: this used to be \D.  The QFT notes define \D as \mathrm{d}; one name, two
+% meanings across the course set is a trap, so the operator got the long name.
+
+% ------------------------------------------------------------ figure styles --
+% Block diagrams.  Course-specific and deliberately unchanged.
+\tikzset{
+  blk/.style  = {draw,rounded corners=1pt,align=center,inner sep=5pt,
+                 minimum height=11mm,minimum width=26mm},
+  sumc/.style = {draw,circle,minimum size=5.5mm,inner sep=0pt},
+  sig/.style  = {font=\small},
+  lbl/.style  = {font=\footnotesize},
+}
+% caption formatting without pulling in the caption package
+\long\def\@makecaption#1#2{%
+  \vskip 6pt
+  \small
+  \sbox\@tempboxa{\textbf{#1.} #2}%
+  \ifdim\wd\@tempboxa>\hsize
+    \textbf{#1.} #2\par
+  \else
+    \global\@minipagefalse
+    \hb@xt@\hsize{\hfil\box\@tempboxa\hfil}%
+  \fi
+  \vskip 2pt}
+
+% section headings a little tighter, MIT-notes-like
+\RequirePackage{titlesec}
+\titleformat{\section}{\normalfont\large\bfseries}{\thesection}{0.7em}{}
+\titleformat{\subsection}{\normalfont\normalsize\bfseries}{\thesubsection}{0.6em}{}
+\titlespacing*{\section}{0pt}{1.5ex plus 1ex minus .2ex}{1.0ex plus .2ex}
+\titlespacing*{\subsection}{0pt}{1.2ex plus 1ex minus .2ex}{0.8ex plus .2ex}
+
+\setlength{\parskip}{0.35em}
+\setlength{\parindent}{0pt}
+\emergencystretch=2em
+% -------------------------------------------------- part and lecture marks ---
+% Two structural marks, shared by both editions.
+%
+% \partdivider{<full title>} opens a Part: a fresh page carrying the title
+% between two hairlines, e.g.
+%       \partdivider{Part I --- Feedback and Modelling}
+%       \partdivider{제1부 --- 되먹임과 모델링}
+% Section numbering is NOT reset by it.  The Parts are a reading order laid
+% over one continuous run of sections 1, 2, 3, ....
+%
+% The ToC line is written at `part' level, not at `section' level, so that
+% hyperref places the Part bookmark one step ABOVE the section bookmarks and
+% the sections nest underneath it.  The Part bookmark carries no \numberline,
+% hence no number, and that is deliberate: the web viewer takes a NUMBERED
+% bookmark to be a section (it keys on the section number to carry the
+% reader's place across the EN/KO switch), so a numbered Part bookmark would
+% be mistaken for a section.
+%
+% ------------------------------------------------ 목차의 대단원 줄 (\l@part) --
+% 여섯 과목 노트가 모두 이 모양을 쓴다. 목차에서 대단원이 어디서 바뀌는지 한눈에
+% 보이게 하는 것이 목적이다: 위에 넉넉한 여백, 본문 폭을 가로지르는 가는 회색 선
+% (이 노트가 다른 데서 쓰는 선과 같은 0.4pt, 같은 계열의 회색), 그 아래 한 칸 키워
+% 굵게 세운 제목. 쪽 번호는 절 줄과 같은 자리·같은 크기다 — 제목의 \large 를
+% 물려받지 않도록 글자 크기를 바꾸기 전에 상자에 담아 둔다.
+% (로마자를 작은 대문자로 세워 보았으나 이 노트가 쓰는 Latin Modern 에는 굵은
+%  작은 대문자 면이 없다. \scshape\bfseries 는 로그에 TU/lmr/bx/sc undefined 를
+%  남기고 조용히 굵은 정체로 대체되어, 화면에는 소문자가 그대로 찍힌다. 한글
+%  글꼴에는 애초에 작은 대문자가 없다 — 그래서 두 판 모두 크기와 굵기로만
+%  드러낸다. 그래야 EN/KO 가 같은 모양이 된다.)
+% 쪽이 끝나는 자리에서 대단원 줄만 홀로 남지 않게: 줄 앞은 넘기기 좋은 자리로
+% 표시하고(\addpenalty{-\@highpenalty}), 선과 제목 사이·제목 뒤는 끊기지 못하게
+% 막는다(\nobreak, \penalty\@M, \@nobreaktrue — 마지막 것이 있어야 뒤따르는
+% \l@section 의 \addpenalty 가 그 자리에 끊을 틈을 도로 내지 않는다).
+% 절·소절 줄은 건드리지 않는다.
+\renewcommand*\l@part[2]{%
+  \ifnum\c@tocdepth>-2\relax
+    \addpenalty{-\@highpenalty}%
+    \addvspace{0.9em \@plus\p@}%
+    \begingroup
+      \parindent\z@ \parfillskip\z@skip \rightskip\z@skip
+      \sbox\z@{#2}%                    % 쪽번호를 목차 본래 크기로 미리 담아 둔다
+      {\color[gray]{0.55}\hrule height0.4pt depth\z@}%
+      \nobreak\vskip 0.4em
+      \rightskip\@pnumwidth \parfillskip-\@pnumwidth
+      \leavevmode\large\bfseries
+      #1\nobreak\hfil\nobreak\hb@xt@\@pnumwidth{\hss\usebox\z@}\par
+      \penalty\@M\vskip 0.25em
+    \endgroup
+    \@nobreaktrue
+  \fi}
+
+\newcommand{\partdivider}[1]{%
+  \clearpage
+  \phantomsection
+  \addcontentsline{toc}{part}{#1}%
+  \vspace*{0.10\textheight}
+  \begin{center}
+    \rule{0.62\textwidth}{0.4pt}\\[13pt]
+    {\Large\scshape #1}\\[13pt]
+    \rule{0.62\textwidth}{0.4pt}
+  \end{center}
+  \vspace{0.045\textheight}
+  \par\noindent\ignorespaces}
+
+% \lecturebreak{<lecture>}{<date>} marks the point at which one lecture's new
+% material begins: a hairline across the measure with the label set flush
+% right, e.g.
+%       \lecturebreak{Lecture 2}{7 September 2026}
+%       \lecturebreak{제2강}{2026년 9월 7일}
+% It goes into neither the ToC nor the bookmarks -- it is a mark in a
+% topic-ordered document, not a division of it.  This is a monochrome course,
+% so the two greys below stand in for the colours the QFT notes use.
+% \widthof is not expandable inside \dimexpr (a hard error, not a warning), so
+% the label is measured into a scratch length with \settowidth first.
+\definecolor{ctlrule}{gray}{0.6}
+\definecolor{ctlmark}{gray}{0.35}
+\newlength{\ctl@lbwidth}
+\newcommand{\lecturebreak}[2]{%
+  \par\addvspace{14pt}%
+  \settowidth{\ctl@lbwidth}{\footnotesize\textsc{#1 \textperiodcentered\ #2}}%
+  \noindent\hbox to \textwidth{%
+    {\color{ctlrule}\vrule height0.4pt depth0pt
+       width\dimexpr\textwidth-\ctl@lbwidth-8pt\relax}%
+    \hfill
+    {\color{ctlmark}\footnotesize\textsc{#1 \textperiodcentered\ #2}}}%
+  \par\addvspace{9pt}\noindent\ignorespaces}
+
+\endinput

@@ -1,0 +1,1058 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- 과목 이름이 들어가는 곳은 아래 <title>, <meta description>, 그리고 헤더 #title
+     안의 두 span 뿐이다. 자바스크립트 없이도 보여야 하는 문구(탭 제목·링크 미리보기)라
+     HTML 에 그대로 두었다. 나머지 과목별 값은 아래 스크립트의 "과목 설정" 블록에 모았다. -->
+<title>제어공학개론 강의노트</title>
+<meta name="description" content="서울대 제어공학개론 (Fall 2026) 학기 누적 강의노트">
+<style>
+  :root{
+    --bar-bg:#ffffffee; --bar-fg:#1b1d20; --bar-dim:#83888f; --bar-line:#00000018;
+    --backdrop:#84868a; --sheet:#ffffff; --sheet-line:#00000022;
+    --btn-bg:#00000010; --btn-fg:#3f454b;
+    --seg-on:#ffffff; --seg-on-fg:#111417; --seg-knob:0 1px 2px #00000022;
+    --shadow:0 1px 2px #00000014, 0 6px 18px #00000018;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bar-bg:#16181bee; --bar-fg:#e7e9ec; --bar-dim:#8b9199; --bar-line:#ffffff1a;
+      --backdrop:#2a2c30; --sheet:#ffffff; --sheet-line:#00000033;
+      --btn-bg:#ffffff14; --btn-fg:#b3b9c1;
+      --seg-on:#3a3e45; --seg-on-fg:#f2f4f7; --seg-knob:0 1px 2px #00000055;
+      --shadow:0 1px 2px #0006, 0 6px 20px #0007;
+    }
+  }
+  *,*::before,*::after{box-sizing:border-box}
+  /* 아래에서 아이디 선택자로 display 를 못 박은 것들이 있다. 그러면 hidden 속성의
+     기본값(display:none)이 특정성에서 밀려, 감춘 요소가 그대로 화면에 남는다.
+     실제로 닫힌 목차 패널이 본문 왼쪽을 덮었다. 여기서 한 번에 못 박는다 —
+     이 파일에서 hidden 으로 감추는 것은 예외 없이 그냥 사라지면 된다. */
+  [hidden]{display:none !important}
+  /* 쪽이 깔리기 전에는 문서가 짧아 세로 스크롤바가 없다가, 깔리는 순간 생긴다.
+     그때 가용 폭이 스크롤바만큼(맥·윈도에서 15~17px) 줄면서 바 가운데의 언어
+     토글도 본문도 그 절반만큼 옆으로 튀었다. 언어를 바꿀 때 쪽을 비우는 순간에도
+     같은 일이 났다. 자리를 늘 비워 두어 그 변화를 없앤다. 겹침 스크롤바를 쓰는
+     환경(모바일, 트랙패드만 쓰는 맥)에서는 원래 폭을 먹지 않아 달라지는 게 없고,
+     이 속성을 모르는 브라우저도 대개 겹침 스크롤바라 마찬가지다.
+     스크롤은 문서 전체가 하므로 html 에 건다 — body 에 걸면 듣지 않는다. */
+  html{-webkit-text-size-adjust:100%; scrollbar-gutter:stable}
+  body{
+    margin:0; background:var(--backdrop); color:var(--bar-fg);
+    font:14px/1.5 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard",
+         "Helvetica Neue",Segoe UI,"Malgun Gothic",sans-serif;
+    overflow-x:hidden;
+  }
+
+  /* ---- 상단 바 ---- */
+  #bar{
+    position:sticky; top:0; z-index:10;
+    display:flex; align-items:center; gap:10px;
+    padding:0 14px; height:44px;
+    background:var(--bar-bg); border-bottom:1px solid var(--bar-line);
+    -webkit-backdrop-filter:saturate(180%) blur(12px); backdrop-filter:saturate(180%) blur(12px);
+  }
+  #title{
+    font-size:13px; font-weight:600; letter-spacing:-.01em; white-space:nowrap;
+    overflow:hidden; text-overflow:ellipsis; flex:0 1 auto; min-width:0;
+  }
+  #title .short{display:none}
+  /* 날짜는 manifest 가 와야 채워진다. 그때 폭이 0 에서 늘면 그만큼 #mid 가 좁아져
+     가운데의 언어 토글이 옆으로 밀린다. 그래서 문구가 오기 전부터 최종 폭을 차지해
+     둔다. 형식은 늘 'YYYY-MM-DD HH:MM KST'(20자)이고 언어를 바꿔도 그대로다.
+     px 로 박으면 글꼴이 늦게 바뀔 때 어긋나므로 글자 기준(ch)으로 잡는다 —
+     글꼴 후보 중 가장 넓은 것이 18.67ch 라 여유를 두었다. */
+  #updated{
+    font-size:11px; color:var(--bar-dim); white-space:nowrap; font-variant-numeric:tabular-nums;
+    flex:0 1 auto; overflow:hidden; min-width:19.2ch;
+  }
+  #mid{flex:1 1 auto; display:flex; justify-content:center; min-width:0}
+  #right{display:flex; align-items:center; gap:10px; flex:0 0 auto}
+
+  /* ---- 언어 토글 (한 덩어리, 미끄러지는 손잡이) ---- */
+  #seg{
+    position:relative; display:inline-flex; padding:3px;
+    background:var(--btn-bg); border-radius:8px;
+  }
+  #knob{
+    position:absolute; top:3px; bottom:3px; left:3px; width:calc(50% - 3px);
+    background:var(--seg-on); border-radius:6px; box-shadow:var(--seg-knob);
+    transition:transform .18s cubic-bezier(.3,.7,.3,1); pointer-events:none;
+  }
+  #seg[data-lang="ko"] #knob{transform:translateX(100%)}
+  /* 첫 페인트에서는 손잡이가 미끄러지면 안 된다 (저장된 언어로 되돌릴 때 튄다) */
+  #seg.noanim #knob{transition:none}
+  /* 폭을 고정한다. flex 로 두면 활성 쪽이 굵어질 때 칸 전체 너비가 흔들린다. */
+  #seg button{
+    position:relative; z-index:1; flex:0 0 auto; width:5.9em;
+    appearance:none; border:0; background:transparent; color:var(--btn-fg);
+    font:inherit; font-size:12px; font-weight:500; line-height:1;
+    padding:6px 0; border-radius:6px; cursor:pointer; white-space:nowrap;
+    text-align:center; transition:color .16s ease;
+  }
+  #seg button[aria-pressed="true"]{color:var(--seg-on-fg); font-weight:600}
+  #seg button:not([aria-pressed="true"]):hover{color:var(--bar-fg)}
+  #seg button:disabled{opacity:.38; cursor:not-allowed}
+  #seg button:focus-visible{outline:2px solid #4a8fff; outline-offset:1px}
+
+  /* ---- 목차 버튼 ---- */
+  /* 서랍이 왼쪽에서 나오므로 버튼도 바 맨 왼쪽에 둔다. 폭은 내용에 맡기되
+     좁은 화면에서는 글자를 접고 기호만 남긴다 — 언어 토글에 줄 자리를 뺏지 않게. */
+  #tocbtn{
+    flex:0 0 auto; display:inline-flex; align-items:center; gap:5px;
+    appearance:none; border:0; background:var(--btn-bg); color:var(--btn-fg);
+    font:inherit; font-size:12px; font-weight:500; line-height:1;
+    padding:6px 9px; border-radius:7px; cursor:pointer; white-space:nowrap;
+    transition:color .16s ease;
+  }
+  #tocbtn:hover{color:var(--bar-fg)}
+  #tocbtn:focus-visible{outline:2px solid #4a8fff; outline-offset:1px}
+  #tocbtn .ico{font-size:13px; line-height:1}
+  /* 책갈피를 다 읽기 전(또는 책갈피가 없는 판)에는 버튼을 쓸 수 없다. 그래도 자리는
+     첫 페인트부터 잡아 둔다 — display 로 빼면 버튼이 나타나는 순간 #mid 가 좁아져
+     이미 보이던 언어 토글이 옆으로 튀었다(1280px 에서 33px, 375px 에서 16px).
+     보이지 않는 동안은 hit-test 에도 tab 순서에도 걸리지 않는다(+ disabled). */
+  #tocbtn.off{visibility:hidden}
+
+  #dl{
+    color:var(--bar-dim); text-decoration:none; font-size:15px; line-height:1;
+    padding:3px 5px; border-radius:5px;
+  }
+  #dl:hover{color:var(--bar-fg); background:var(--btn-bg)}
+  /* 쪽 표시도 자리를 미리 잡는다. '–' 에서 '1 / 32' 로, 다시 '100 / 216' 으로
+     자릿수가 늘 때마다 폭이 변하면 그때마다 언어 토글이 따라 움직였다(스크롤만
+     해도 움직였다). 세 자리까지('999 / 999') 담는 폭을 늘 잡아 둔다. 글꼴 후보를
+     다 재어 가장 넓은 것(7.83ch)에 여유를 둔 값이다. */
+  #pageind{
+    font-size:12px; color:var(--bar-dim); font-variant-numeric:tabular-nums;
+    white-space:nowrap; min-width:8.2ch; text-align:right;
+  }
+
+  /* ---- 읽는 면 ---- */
+  #viewer{padding:16px 12px 56px}
+  .page{
+    width:min(100%,980px); margin:0 auto 16px; background:var(--sheet);
+    border:1px solid var(--sheet-line); box-shadow:var(--shadow);
+    aspect-ratio:1/1.4142; overflow:hidden; position:relative;
+    /* 화면 밖 쪽은 그리기를 건너뛴다. 크기는 폭과 비율로 정해지므로 스크롤
+       위치 계산은 흔들리지 않는다. */
+    content-visibility:auto;
+  }
+  .page:last-child{margin-bottom:0}
+  .page canvas,.page img{display:block; width:100%; height:auto}
+  /* 아직 그려지지 않은 쪽에는 옅은 안내만 둔다. 빈 흰 종이만 떠 있으면
+     느린 연결에서 고장난 것처럼 보이기 때문이다. 폭이 바뀌어 다시 그리는
+     동안에는 옛 그림을 그대로 두므로 안내를 띄우지 않는다. */
+  .page:not(.has-img)::after{
+    content:"불러오는 중\2026"; position:absolute; inset:0;
+    display:grid; place-items:center;
+    color:#b4b0aa; font-size:12px; letter-spacing:.05em;
+  }
+
+  #msg{
+    max-width:640px; margin:22vh auto; padding:0 20px;
+    color:var(--bar-fg); font-size:14px; line-height:1.7; text-align:center; opacity:.85;
+  }
+  #msg small{display:block; margin-top:6px; font-size:12px; color:var(--bar-dim)}
+
+  /* ---- 목차 서랍 ----
+     넓은 화면에서는 왼쪽에 세로로 선 서랍, 좁은 화면에서는 아래에서 올라오는
+     시트다. 색은 상단 바와 같은 토큰을 쓴다 — 뒤 종이가 비쳐도 바와 한 덩어리로
+     보이게. 뒤 배경막은 본문 바탕색을 옅게 깐 것이라 새 색을 만들지 않았다. */
+  /* 드나드는 모습은 transform 한 축으로만 그린다. 쉬는 자리(클래스 없음)가 화면
+     밖이고, 여는 클래스 .in 이 제자리다 — 그래서 여는 길과 닫는 길이 같은 길이다.
+     다 나간 뒤에 hidden 을 도로 씌우는 일은 JS 가 맡는다(tocArm/tocGone). */
+  /* 나가는 중인 배경막·서랍은 손가락을 받지 않는다. 배경막은 상단 바까지 덮으므로,
+     받게 두면 닫자마자 다시 누른 목차 버튼이 배경막에 먹혀 안 열린다. */
+  #tocveil{
+    position:fixed; inset:0; z-index:19; border:0; padding:0;
+    background:var(--backdrop); opacity:0; cursor:default; pointer-events:none;
+    transition:opacity .2s ease;
+  }
+  #tocveil.in{opacity:.5; pointer-events:auto}
+  #toc{
+    position:fixed; z-index:20; top:0; left:0; bottom:0; width:min(340px,86vw);
+    display:flex; flex-direction:column; overflow:hidden;
+    background:var(--bar-bg); color:var(--bar-fg);
+    border-right:1px solid var(--bar-line); box-shadow:var(--shadow);
+    -webkit-backdrop-filter:saturate(180%) blur(12px); backdrop-filter:saturate(180%) blur(12px);
+    transform:translateX(-100%);                  /* 넓은 화면: 왼쪽 밖에 세워 둔다 */
+    transition:transform .2s cubic-bezier(.3,.7,.3,1);
+    pointer-events:none;
+  }
+  #toc.in{transform:none; pointer-events:auto}
+  #tochead{
+    display:flex; align-items:center; gap:10px; flex:0 0 auto;
+    padding:0 8px 0 14px; height:44px; border-bottom:1px solid var(--bar-line);
+  }
+  #tochead span{font-size:13px; font-weight:600; letter-spacing:-.01em; flex:1 1 auto}
+  #tocx{
+    appearance:none; border:0; background:transparent; color:var(--bar-dim);
+    font:inherit; font-size:15px; line-height:1; padding:5px 7px;
+    border-radius:6px; cursor:pointer;
+  }
+  #tocx:hover{color:var(--bar-fg); background:var(--btn-bg)}
+  #tocx:focus-visible{outline:2px solid #4a8fff; outline-offset:1px}
+  /* 위쪽 안쪽 여백은 두지 않는다. 붙어 있는 대단원 머리(.tocitem.part)의 top:0 은
+     이 상자의 안쪽(padding 안) 위 끝에서 재는데, 잘려 나가는 자리는 바깥 위 끝이다 —
+     여백을 두면 그 틈만큼 지나가는 줄이 머리 위로 비어져 나온다. 첫 줄의 숨 쉴 자리는
+     .tocitem 이 제 padding 으로 이미 갖고 있다. */
+  #toclist{
+    flex:1 1 auto; overflow-y:auto; overscroll-behavior:contain;
+    -webkit-overflow-scrolling:touch; padding:0 0 14px;
+  }
+  /* 들여쓰기는 책갈피 깊이(--lv)로만 정한다. 줄은 다 옅게, 대단원 머리만 뚜렷하게. */
+  .tocitem{
+    display:block; width:100%; text-align:left; appearance:none; border:0;
+    border-left:2px solid transparent; background:transparent; color:var(--bar-dim);
+    font:inherit; font-size:12.5px; line-height:1.45; cursor:pointer;
+    padding:6px 14px 6px calc(12px + (var(--lv,1) - 1) * 13px);
+  }
+  div.tocitem{cursor:default}                 /* 갈 곳을 못 푼 항목은 보여만 준다 */
+  button.tocitem:hover{background:var(--btn-bg); color:var(--bar-fg)}
+  .tocitem.cur{
+    background:var(--btn-bg); color:var(--bar-fg); font-weight:600;
+    border-left-color:currentColor;
+  }
+  .tocitem:focus-visible{outline:2px solid #4a8fff; outline-offset:-2px}
+
+  /* ---- 목차의 대단원 ----
+     목록은 대단원 단위로 묶인다(.tocsec). 묶음의 머리는 목록 속 한 줄이 아니라
+     구획의 머리로 그린다: 앞 구획과의 사이에 여백과 가는 선을 두고, 글자는 절보다
+     크고 굵게. 어느 항목이 머리인지는 책갈피 나무의 모양만 보고 정하므로(JS 의
+     tocBuild) 과목마다 이름이 달라도(Part, 부록 A, 제3장 …) 그대로 맞는다.
+     묶음에 들지 않는 최상위 항목(Conventions, References 같은 앞·뒤 붙임)은
+     절과 같은 옅은 보통 줄로 남아 대단원과 확실히 구별된다.
+     머리는 패널을 굴리는 동안 맨 위에 붙어 있다가 다음 머리가 올라오면 밀려난다 —
+     그래서 목록 한가운데에서도 지금 어느 대단원인지 늘 보인다.
+     이 규칙들은 .cur / :hover 보다 뒤에 두어야 한다(특정성이 같아 순서가 이긴다). */
+  /* 구획 사이 여백은 '다음 구획의 위'가 아니라 '앞 구획의 아래'에 둔다. 그래야 그 틈을
+     지나는 동안에도 앞 구획의 머리가 그대로 붙어 있다가 다음 머리에게 바로 자리를 넘긴다
+     — 위에 두면 그 사이 아무 머리도 안 붙는다.
+     다만 붙어 있는 머리가 따라다니는 것은 제 구획의 '안쪽 상자'까지다. padding 은 그
+     바깥이라 여백을 padding 으로 주면 그 13px 동안 머리가 또 풀린다(고쳐 놓고 같은 틈이
+     남는다). 그래서 안쪽에 빈 칸을 하나 두어 상자 자체를 늘린다 — 줄이 아니므로 손이
+     닿지도, 짚이지도, 키보드로 걸리지도 않는다. */
+  .tocsec::after{content:""; display:block; height:13px}
+  #toclist > .tocsec:last-child::after{display:none}
+  .tocitem.part{
+    position:sticky; top:0; z-index:1;
+    /* 패널 바탕(--bar-bg)은 살짝 비치는 색이라 한 겹만 깔면 밑을 지나가는 줄이
+       유령처럼 비친다. 새 색을 만들지 않고 같은 토큰을 두 겹 깔아 가린다. */
+    background-color:var(--bar-bg);
+    background-image:linear-gradient(var(--bar-bg),var(--bar-bg));
+    border-top:1px solid var(--bar-line);
+    color:var(--bar-fg); font-size:13.5px; font-weight:700; letter-spacing:.005em;
+    padding-top:9px; padding-bottom:9px;
+  }
+  #toclist > .tocsec:first-child > .tocitem.part{border-top:0}
+  /* 짚어 주는 색·손이 닿은 색은 그 두 겹 위에 얹는다(맨 앞이 맨 위 겹이다).
+     .cur / :hover 쪽 background 한 줄 표기가 겹을 지우지 않게 여기서 다시 적는다. */
+  button.tocitem.part:hover,.tocitem.part.cur{
+    background-image:linear-gradient(var(--btn-bg),var(--btn-bg)),
+                     linear-gradient(var(--bar-bg),var(--bar-bg));
+    color:var(--bar-fg);
+  }
+
+  @media (max-width:560px){
+    #bar{height:42px; padding:0 10px; gap:7px}
+    #title .long{display:none}
+    #title .short{display:inline}
+    #title{font-size:12.5px}
+    #updated{display:none}
+    #seg button{padding:5px 0; font-size:11.5px; width:5.3em}
+    #right{gap:6px}
+    /* 글자만 조금 줄인다. 예약 폭은 ch 라서 줄어든 글자 크기에 맞춰 따라 줄어든다 —
+       예전처럼 min-width 를 0 으로 풀면 좁은 화면에서 다시 폭이 들썩인다. */
+    #pageind{font-size:11.5px}
+    #viewer{padding:10px 8px 40px}
+    #tocbtn{padding:6px 7px}
+    #tocbtn .lbl{display:none}
+    /* 좁은 화면에서는 아래에서 올라오는 시트로. 가로는 화면을 꽉 채우므로
+       넘칠 일이 없고, 세로는 화면을 다 덮지 않아 뒤가 어디였는지 보인다. */
+    #toc{
+      top:auto; right:0; width:auto; max-height:72vh;
+      border-right:0; border-top:1px solid var(--bar-line);
+      border-radius:14px 14px 0 0;
+      transform:translateY(100%);                 /* 좁은 화면: 화면 아래에 내려 둔다 */
+    }
+  }
+  /* 움직임을 꺼 둔 사람에게는 그냥 있다가 그냥 없어진다. transitionend 가 오지
+     않으므로 hidden 도 JS 가 그 자리에서 바로 씌운다(tocArm). */
+  @media (prefers-reduced-motion:reduce){
+    *{transition:none !important}
+  }
+</style>
+</head>
+<body>
+
+<header id="bar">
+  <button type="button" id="tocbtn" class="off" disabled aria-hidden="true" tabindex="-1"
+          aria-expanded="false" aria-controls="toc"
+          title="목차" aria-label="목차"><span class="ico" aria-hidden="true">☰</span><span class="lbl">목차</span></button>
+  <div id="title"><span class="long">제어공학개론 강의노트</span><span class="short">제어공학개론</span></div>
+  <div id="updated"></div>
+  <div id="mid">
+    <div id="seg" class="noanim" data-lang="en" role="group" aria-label="언어 선택">
+      <span id="knob" aria-hidden="true"></span>
+      <button type="button" id="btn-en" aria-pressed="true">English</button>
+      <button type="button" id="btn-ko" aria-pressed="false">한국어</button>
+    </div>
+  </div>
+  <div id="right">
+    <a id="dl" href="#" title="PDF 내려받기" aria-label="PDF 내려받기">↓</a>
+    <span id="pageind" aria-live="off">–</span>
+  </div>
+</header>
+
+<main id="viewer"></main>
+
+<button type="button" id="tocveil" hidden tabindex="-1" aria-label="목차 닫기"></button>
+<aside id="toc" hidden role="dialog" aria-modal="true" aria-label="목차">
+  <div id="tochead"><span>목차</span><button type="button" id="tocx" aria-label="목차 닫기">✕</button></div>
+  <div id="toclist"></div>
+</aside>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+(function(){
+  'use strict';
+
+  /* ==================== 과목 설정 ====================
+     다른 과목에 복제할 때 손대는 곳은 이 블록뿐이다. 아래 코드는 어느 과목인지
+     알지 못한다. (탭 제목·링크 미리보기에 쓰이는 문구만은 자바스크립트 없이도
+     보여야 해서 head 와 헤더의 HTML 에 남겨 두었다 — 거기 표시를 달아 두었다.) */
+  var FILES        = { ko:'control_notes_KR.pdf', en:'control_notes_EN.pdf' };
+  var DEFAULT_LANG = 'en';                     // 처음 여는 사람에게는 영문판
+  // 기본값을 바꾸면서 키도 함께 올린다. 예전 키가 남아 있으면 옛 선택이 계속 이긴다.
+  var LS_LANG      = 'ctrl.lang5';
+  var LS_POS       = 'ctrl.pos5.';
+  /* ================== 과목 설정 끝 ================== */
+
+  var PDFJS_VERSION = '3.11.174';
+  // CJK CMap 과 표준 폰트 데이터. cdnjs 는 이 보조 파일들을 서비스하지 않아
+  // 같은 버전의 pdfjs-dist 를 jsdelivr 에서 가져온다. (한글이 깨지는 원인)
+  var PDFJS_DATA = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@' + PDFJS_VERSION + '/';
+
+  var bar      = document.getElementById('bar');
+  var viewer   = document.getElementById('viewer');
+  var updatedEl= document.getElementById('updated');
+  var pageInd  = document.getElementById('pageind');
+  var dl       = document.getElementById('dl');
+  var seg      = document.getElementById('seg');
+  var btnEn    = document.getElementById('btn-en');
+  var btnKo    = document.getElementById('btn-ko');
+  var tocBtn   = document.getElementById('tocbtn');
+  var tocEl    = document.getElementById('toc');
+  var tocVeil  = document.getElementById('tocveil');
+  var tocX     = document.getElementById('tocx');
+  var tocList  = document.getElementById('toclist');
+
+  var manifest = null, pdfDoc = null, lang = null;
+  var pageEls = [], io = null, curPage = 1, lastWidth = 0, busy = false;
+  // 언어 전환 중에 눌린 버튼을 삼키지 않기 위한 대기열, 그리고
+  // 두 판의 절 -> 시작 쪽 대응표(전환할 때 읽던 자리를 찾아가는 데 쓴다).
+  var pending = null, anchors = { ko:null, en:null };
+
+  /* ---------- 작은 도구들 ---------- */
+  function ls(fn){ try { return fn(); } catch(e){ return null; } }
+  function topOf(el){ return el.getBoundingClientRect().top + window.pageYOffset; }
+  function barH(){ return bar.offsetHeight; }
+
+  function quiet(main, sub){
+    viewer.innerHTML = '';
+    var d = document.createElement('div'); d.id = 'msg';
+    d.appendChild(document.createTextNode(main));
+    if (sub){ var s = document.createElement('small'); s.textContent = sub; d.appendChild(s); }
+    viewer.appendChild(d);
+    pageInd.textContent = '–';
+  }
+
+  function parseHash(){
+    var m = /(?:^|[#&])page=(\d+)/.exec(location.hash || '');
+    return m ? parseInt(m[1], 10) : null;
+  }
+
+  /* ---------- 페이지 렌더 ----------
+     그린 쪽을 캔버스로 들고 있으면 한 장이 (폭 × 배율)² × 4바이트라, 20쪽짜리
+     문서면 수백 MB 가 쌓인다. 탭을 떠났다 돌아오면 브라우저가 그 큰 캔버스들의
+     GPU 메모리를 회수했다가 다시 올리느라 한동안 버벅였다.
+     그래서 다 그린 캔버스는 PNG 로 떠서 <img> 로 바꿔 끼우고 바로 버린다.
+     이미지는 브라우저가 보일 때만 풀어 쓰고, 모자라면 버렸다가 압축본에서 싸게
+     다시 푼다 — PDF.js 로 다시 그리는 것보다 훨씬 가볍고, 돌아왔을 때 다시 그릴
+     일이 없다. 그리는 일은 한 번에 한 쪽씩, 화면에 가까운 쪽부터 한다.
+     탭이 가려져 있어도 그리기를 멈추지는 않는다. 앱 안 브라우저(웹뷰) 중에는
+     보이는데도 hidden 이라고 답하는 것이 있어서, 멈추면 빈 종이만 남는다. 어차피
+     줄에 오르는 건 화면 근처 몇 쪽뿐이라 멈춰서 아낄 것도 별로 없다. */
+  var MAX_DPR    = 2;     // 3배로 그려도 글자는 더 선명해지지 않고 픽셀만 2.25배가 된다
+  var MAX_PIXELS = 6e6;   // 한 쪽 상한. 큰 모니터에서 한 장 그리는 데 한참 걸리지 않게
+  var queue = [], active = null, gen = 0;
+
+  // 지금 화면에서 얼마나 떨어져 있나(px). 0 이면 보이는 중이다.
+  function gap(el){
+    var r = el.getBoundingClientRect(), h = window.innerHeight || 800;
+    return r.bottom < 0 ? -r.bottom : (r.top > h ? r.top - h : 0);
+  }
+
+  function renderPage(el){
+    var s = el.dataset.state;
+    if (s === 'done' || s === 'busy' || s === 'queued') return;
+    el.dataset.state = 'queued';
+    queue.push(el);
+    pump();
+  }
+
+  function pump(){
+    if (active || !pdfDoc) return;
+    var reach = Math.max(1600, 2.5 * (window.innerHeight || 800));
+    // 그새 멀어진 쪽은 줄에서 뺀다. 다시 다가오면 관찰자가 또 넣어 준다.
+    queue = queue.filter(function(el){
+      if (el.isConnected && gap(el) < reach) return true;
+      if (el.dataset.state === 'queued') el.dataset.state = '';
+      return false;
+    });
+    if (!queue.length) return;
+    queue.sort(function(a, b){ return gap(a) - gap(b); });
+    draw(queue.shift());
+  }
+
+  function toURL(c){
+    return new Promise(function(res){
+      if (!c.toBlob) return res(c.toDataURL('image/png'));
+      c.toBlob(function(b){ res(b ? URL.createObjectURL(b) : c.toDataURL('image/png')); }, 'image/png');
+    });
+  }
+
+  function draw(el){
+    var my = gen, doc = pdfDoc, w = el.clientWidth, n = parseInt(el.dataset.page, 10);
+    if (!w){ el.dataset.state = ''; return pump(); }
+    el.dataset.state = 'busy';
+    var job = active = { el: el, task: null }, pg = null;
+    doc.getPage(n).then(function(page){
+      pg = page;
+      if (my !== gen) return;                         // 언어가 바뀌었으면 버린다
+      var base  = page.getViewport({ scale: 1 });
+      el.style.aspectRatio = base.width + ' / ' + base.height;
+      var scale = w * Math.min(window.devicePixelRatio || 1, MAX_DPR) / base.width;
+      var px    = base.width * base.height * scale * scale;
+      if (px > MAX_PIXELS) scale *= Math.sqrt(MAX_PIXELS / px);
+      var vp = page.getViewport({ scale: scale });
+      var c  = document.createElement('canvas');
+      c.width  = Math.max(1, Math.floor(vp.width));
+      c.height = Math.max(1, Math.floor(vp.height));
+      var ctx = c.getContext('2d', { alpha:false });
+      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
+      job.task = page.render({ canvasContext: ctx, viewport: vp });
+      return job.task.promise.then(function(){ return toURL(c); }).then(function(url){
+        c.width = c.height = 0;                       // 캔버스 메모리는 바로 돌려준다
+        if (my !== gen){ URL.revokeObjectURL(url); return; }
+        var img = el.querySelector('img'), prev = el.dataset.url;
+        if (!img){ img = new Image(); img.alt = ''; img.decoding = 'async'; }
+        // 옛 그림은 새 그림이 다 풀린 뒤에 놓아준다 — 그 사이 빈 종이가 보이지 않게.
+        img.onload = function(){ if (prev && prev !== url) URL.revokeObjectURL(prev); };
+        img.src = url;
+        el.dataset.url = url;
+        if (img.parentNode !== el) el.replaceChildren(img);
+        el.classList.add('has-img');
+        el.dataset.state = 'done';
+        el.dataset.w = String(w);
+        // 그리는 사이 폭이 바뀌었으면 새 폭으로 한 번 더 그린다.
+        if (el.clientWidth && el.clientWidth !== w){ el.dataset.state = ''; renderPage(el); }
+      });
+    }).catch(function(err){
+      if (!err || err.name !== 'RenderingCancelledException')
+        console.warn('page ' + n + ' render failed', err);
+      if (el.dataset.state === 'busy') el.dataset.state = '';
+    }).then(function(){
+      if (pg){ try { pg.cleanup(); } catch(e){} }     // PDF.js 가 쪽마다 쥔 자원도 놓는다
+      if (active === job) active = null;
+      pump();
+    });
+  }
+
+  function makeObserver(){
+    if (io) io.disconnect();
+    io = new IntersectionObserver(function(entries){
+      for (var i=0;i<entries.length;i++){
+        if (entries[i].isIntersecting) renderPage(entries[i].target);
+      }
+    }, { root:null, rootMargin:'900px 0px', threshold:0 });
+  }
+
+  /* ---------- 절 대응표 ----------
+     두 판은 쪽수가 다르다. 쪽번호를 그대로 물려주면 전환한 순간 엉뚱한 대목에
+     떨어진다. PDF 에 hyperref 가 남긴 북마크에서 절과 그 절이 시작하는 쪽을 뽑아
+     두면, 절은 두 판이 같으므로 읽던 자리를 옮길 수 있다.
+     절을 가리키는 열쇠는 번호다(번호는 번역해도 안 변한다). 번호 뒤에 점이 붙는
+     형식과 안 붙는 형식이 둘 다 돌아다녀서 양쪽을 다 받는다: amsart 는 "2.3. 제목",
+     article + hyperref bookmarksnumbered 는 "2.3 제목" 으로 쓴다. 점을 필수로 두면
+     후자에서 "2.3" 대신 앞자리 "2" 만 잘려 나와 한 절의 하위 절이 전부 같은 열쇠로
+     뭉개진다 — 그래서 점은 선택으로 두고 뒤에 공백이 오는지로 끊는다.
+     번호를 못 뽑으면 목차에서의 자리(1-2-3 식 경로)를 대신 쓴다. 두 판의 목차
+     뼈대가 같은 한 이쪽도 대응되고, 그마저 안 맞으면 locate 가 진행률로 근사한다. */
+  // 절이 시작하는 자리를 쪽번호만이 아니라 쪽 안의 높이까지 담아 "0 부터 센 실수
+  // 쪽 위치"로 적는다(pos = 쪽 인덱스 + 위에서부터 잰 비율). 쪽번호만 알면 한 쪽에
+  // 절이 여럿 몰렸을 때 절 안의 비율이 사라지고, 쪽 맨 위를 읽는데도 쪽 아래쪽에서
+  // 시작하는 절을 이미 지나친 것으로 쳐서 왕복할 때마다 한 쪽씩 밀렸다.
+  function destFrac(d, view){
+    var kind = d[1] && d[1].name, top = null;
+    if (kind === 'XYZ') top = d[3];
+    else if (kind === 'FitH' || kind === 'FitBH') top = d[2];
+    if (top === null || top === undefined || !view) return 0;
+    var y0 = view[1], y1 = view[3], h = y1 - y0;
+    if (!(h > 0)) return 0;
+    return Math.max(0, Math.min(0.999, (y1 - top) / h));
+  }
+
+  function buildAnchors(doc){
+    return doc.getOutline().then(function(outline){
+      if (!outline) return null;
+      var flat = [];
+      (function walk(items, path){
+        for (var i=0;i<(items||[]).length;i++){
+          var here = path.concat(i + 1);
+          flat.push({ item: items[i], path: here });
+          walk(items[i].items, here);
+        }
+      })(outline, []);
+      var views = {};                                   // 쪽 인덱스 -> view 약속(쪽마다 한 번만 연다)
+      function viewOf(idx){
+        if (!views[idx]) views[idx] = doc.getPage(idx + 1)
+          .then(function(pg){ return pg.view; }).catch(function(){ return null; });
+        return views[idx];
+      }
+      var jobs = flat.map(function(row){
+        var it = row.item;
+        var m = /^\s*([0-9]+(?:\.[0-9]+)*|[A-Z](?:\.[0-9]+)*)\.?(?=\s|$)/.exec(it.title || '');
+        var key = m ? m[1] : '#' + row.path.join('.');
+        // 제목과 깊이도 함께 담는다 — 목차가 이 결과를 그대로 다시 쓰기 때문에
+        // getOutline/getDestination 을 두 번 부를 일이 없다. 갈 곳을 못 풀어도
+        // 줄은 남긴다(목차에는 책갈피가 하나도 빠지지 않게).
+        var base = {
+          key: key, level: row.path.length, page: null, pos: null,
+          title: String(it.title == null ? '' : it.title).replace(/\s+/g, ' ').trim()
+        };
+        var dest = typeof it.dest === 'string'
+          ? doc.getDestination(it.dest) : Promise.resolve(it.dest);
+        return Promise.resolve(dest).then(function(d){
+          if (!d || !d[0]) return base;
+          return doc.getPageIndex(d[0]).then(function(idx){
+            return viewOf(idx).then(function(view){
+              base.page = idx + 1;
+              base.pos  = idx + destFrac(d, view);
+              return base;
+            });
+          });
+        }).catch(function(){ return base; });
+      });
+      return Promise.all(jobs).then(function(rows){
+        // list: 자리를 푼 것만 위치순 (언어 전환이 읽던 절을 찾는 데 쓴다)
+        // toc : 책갈피 차례 그대로 (목차가 보여 주는 순서)
+        var list = rows.filter(function(r){ return r.pos !== null; })
+                       .sort(function(a,b){ return a.pos - b.pos; });
+        return list.length ? { list: list, toc: rows } : null;
+      });
+    }).catch(function(){ return null; });
+  }
+
+  // i 번째 절이 끝나는 자리(다음 절의 시작, 마지막 절이면 문서 끝).
+  function anchorEnd(list, i, total){
+    return (i+1 < list.length) ? list[i+1].pos : total;
+  }
+
+  // 지금 보고 있는 자리를 "어느 절의 몇 퍼센트 지점"으로 표현한다.
+  function whereAmI(){
+    var list = anchors[lang] && anchors[lang].list;
+    var total = pageEls.length;
+    var el = pageEls[curPage-1];
+    var off = el ? ((window.pageYOffset + barH()) - topOf(el)) / (el.offsetHeight || 1) : 0;
+    off = Math.max(0, Math.min(0.999, off));
+    var pos = curPage - 1 + off;                       // 0-based 실수 쪽 위치(위에서부터)
+    if (!list || !total) return { frac: total ? pos / total : 0 };
+    var i = -1;
+    for (var k=0;k<list.length;k++){ if (list[k].pos <= pos) i = k; else break; }
+    if (i < 0) return { frac: pos / total };
+    var start = list[i].pos;
+    var span  = anchorEnd(list, i, total) - start;
+    var within = span > 0 ? (pos - start) / span : 0;
+    return { key: list[i].key, within: Math.max(0, Math.min(1, within)), frac: pos / total };
+  }
+
+  // 그 자리를 다른 판에서 찾는다. 대응표가 없으면 전체 진행률로 근사한다.
+  function locate(where, l){
+    var total = pageEls.length;
+    if (!where || !total) return null;
+    var list = anchors[l] && anchors[l].list;
+    if (where.key && list){
+      for (var i=0;i<list.length;i++){
+        if (list[i].key === where.key){
+          var start = list[i].pos;
+          var pos   = start + (where.within || 0) * Math.max(anchorEnd(list, i, total) - start, 0);
+          pos = Math.max(0, Math.min(total - 0.001, pos));
+          return { p: Math.floor(pos) + 1, o: pos - Math.floor(pos) };
+        }
+      }
+    }
+    var q = Math.max(0, Math.min(total - 0.001, (where.frac || 0) * total));
+    return { p: Math.floor(q) + 1, o: q - Math.floor(q) };
+  }
+
+  /* ---------- 스크롤 위치 ---------- */
+  function computePage(){
+    var y = window.pageYOffset + barH() + 24, p = 1;
+    for (var i=0;i<pageEls.length;i++){
+      if (topOf(pageEls[i]) <= y) p = i + 1; else break;
+    }
+    return p;
+  }
+  function paintIndicator(){
+    pageInd.textContent = pageEls.length ? (curPage + ' / ' + pageEls.length) : '–';
+  }
+  function savePos(){
+    if (!lang || !pageEls.length) return;
+    var el = pageEls[curPage-1];
+    var off = (window.pageYOffset + barH()) - topOf(el);
+    ls(function(){
+      localStorage.setItem(LS_POS + lang,
+        JSON.stringify({ p: curPage, o: off / (el.offsetHeight || 1) }));
+    });
+  }
+  function goTo(p, o){
+    if (!pageEls.length) return;
+    p = Math.max(1, Math.min(pageEls.length, p || 1));
+    var el = pageEls[p-1];
+    var y = topOf(el) - barH() + (o || 0) * el.offsetHeight;
+    window.scrollTo(0, Math.max(0, Math.round(y)));
+    curPage = p; paintIndicator();
+  }
+
+  var ticking = false, saveTimer = 0;
+  window.addEventListener('scroll', function(){
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(function(){
+      ticking = false;
+      var p = computePage();
+      if (p !== curPage){ curPage = p; paintIndicator(); }
+      if (tocOpen) tocMark(false);       // 열려 있을 때만 짚어 준다 (닫혀 있으면 헛일이다)
+      clearTimeout(saveTimer); saveTimer = setTimeout(savePos, 250);
+    });
+  }, { passive:true });
+
+  /* 폭이 바뀌면 다시 그린다 (재관찰하면 보이는 페이지부터 콜백이 다시 온다) */
+  var rsTimer = 0;
+  window.addEventListener('resize', function(){
+    clearTimeout(rsTimer);
+    rsTimer = setTimeout(function(){
+      if (!pageEls.length) return;
+      var w = pageEls[0].clientWidth;
+      if (w === lastWidth || !w) return;
+      lastWidth = w;
+      var keep = { p: curPage, o: 0 };
+      for (var i=0;i<pageEls.length;i++){
+        if (pageEls[i].dataset.w !== String(w)) pageEls[i].dataset.state = '';
+        io.unobserve(pageEls[i]); io.observe(pageEls[i]);
+      }
+      goTo(keep.p, keep.o);
+    }, 220);
+  });
+
+  window.addEventListener('hashchange', function(){
+    var p = parseHash(); if (p) goTo(p, 0);
+  });
+  window.addEventListener('pagehide', savePos);
+  // 탭이 가려지면 읽던 자리를 저장해 둔다 — 휴대폰에서 앱을 옮길 때는
+  // pagehide 가 안 오는 일이 잦다. 돌아오면 줄에 남은 쪽을 마저 그린다.
+  // 이미 그린 쪽은 이미지라서 다시 그릴 필요가 없다.
+  document.addEventListener('visibilitychange', function(){
+    if (document.visibilityState === 'hidden') savePos(); else pump();
+  });
+
+  /* ---------- 목차 ----------
+     책갈피 트리를 그대로 세워 두고, 고른 줄의 제목 자리로 보낸다. 대응표를 만들 때
+     outline 과 dest 를 이미 다 풀어 두었으므로(anchors[lang].toc) 여기서는 PDF 에
+     아무것도 다시 묻지 않는다. 목록 DOM 도 처음 열 때 만든다 — 안 여는 사람에게는
+     드는 값이 없다. 언어를 바꾸면 그 판의 책갈피로 다시 세운다.
+     책갈피가 없는 PDF 에서는 버튼을 쓸 수 없게만 하고 자리는 그대로 둔다. */
+  var tocOpen = false, tocLang = null, tocNodes = [], tocCur = -1;
+
+  function tocRows(){ var a = anchors[lang]; return (a && a.toc) || null; }
+
+  // 쓸 수 있는지만 바꾼다. 자리는 언제나 잡아 둔 채다 — 버튼이 들락거리면 그 옆의
+  // 언어 토글이 따라 밀린다. 못 쓰는 동안에는 보이지 않고, 눌러도 잡히지 않고,
+  // tab 으로도 닿지 않는다.
+  function tocBtnUsable(on){
+    tocBtn.classList.toggle('off', !on);
+    tocBtn.disabled = !on;
+    if (on){ tocBtn.removeAttribute('aria-hidden'); tocBtn.removeAttribute('tabindex'); }
+    else { tocBtn.setAttribute('aria-hidden', 'true'); tocBtn.setAttribute('tabindex', '-1'); }
+  }
+
+  // 버튼을 쓸 수 있는지는 지금 판의 책갈피가 정한다 (문서를 열 때마다 다시 본다).
+  function tocSync(){
+    var rows = tocRows();
+    var has = !!(rows && rows.length);
+    tocBtnUsable(has);
+    if (!has){ closeToc(false); tocLang = null; tocNodes = []; tocCur = -1; tocList.replaceChildren(); return; }
+    if (!tocOpen) return;
+    // 열어 둔 채로 언어를 바꿨으면 그 자리에서 새 판의 책갈피로 갈아 끼운다.
+    tocBuild(); tocMark(true);
+    var i = (tocCur >= 0 && tocNodes[tocCur] && tocNodes[tocCur].tagName === 'BUTTON') ? tocCur : tocFirst();
+    tocRove(i);
+    if (i >= 0) tocNodes[i].focus();
+  }
+
+  function tocBuild(){
+    var rows = tocRows() || [];
+    tocLang = lang; tocNodes = []; tocCur = -1;
+    var frag = document.createDocumentFragment();
+    // 목록을 대단원 단위로 묶는다. 대단원인지는 책갈피 나무의 모양만 보고 정한다 —
+    // 최상위(깊이 1)이면서 바로 아래에 자식을 거느린 줄이 그것이다. 과목마다
+    // 이름이 달라도(Part I, 부록 A, 제3장 …) 같은 규칙으로 잡힌다. 자식이 없는
+    // 최상위 줄(Conventions, References 같은 앞·뒤 붙임)은 묶지 않고 그냥 둔다.
+    // tocNodes 는 rows 와 한 칸씩 짝을 이룬 채다(묶는 것은 DOM 뿐이다) — 키보드
+    // 이동도, 지금 절 짚기도 지금까지와 똑같이 돈다.
+    var sec = null;
+    for (var i=0;i<rows.length;i++){
+      var r = rows[i];
+      var go = r.pos !== null;
+      var head = (r.level === 1 && rows[i+1] && rows[i+1].level > r.level);
+      if (r.level === 1) sec = null;            // 최상위 줄이 오면 앞 구획은 거기서 끝난다
+      var n = document.createElement(go ? 'button' : 'div');
+      if (go){ n.type = 'button'; n.tabIndex = -1; }
+      n.className = 'tocitem' + (head ? ' part' : '');
+      n.style.setProperty('--lv', String(r.level));
+      n.textContent = r.title;
+      n.dataset.i = String(i);
+      if (head){
+        sec = document.createElement('div');
+        sec.className = 'tocsec';
+        frag.appendChild(sec);
+      }
+      (sec || frag).appendChild(n);
+      tocNodes.push(n);
+    }
+    tocList.replaceChildren(frag);
+  }
+
+  // 지금 읽는 자리(0 부터 센 실수 쪽 위치)를 넘지 않는 마지막 항목.
+  function tocHere(){
+    var rows = tocRows();
+    if (!rows || !pageEls.length) return -1;
+    var el = pageEls[curPage-1];
+    if (!el) return -1;
+    var h = el.offsetHeight || 1;
+    var off = ((window.pageYOffset + barH()) - topOf(el)) / h;
+    var pos = curPage - 1 + Math.max(0, Math.min(0.999, off));
+    // 스크롤은 정수 픽셀로 끊기므로 방금 찾아간 절이 제 자리보다 몇백분의 일 쪽
+    // 위에 걸릴 수 있다. 그 몇 px 은 "닿았다"로 친다 — 안 그러면 목차에서 고른
+    // 바로 그 절 대신 그 앞 절이 짚인다.
+    var eps = 3 / h;
+    var best = -1, bp = -1;
+    for (var i=0;i<rows.length;i++){
+      var p = rows[i].pos;
+      if (p !== null && p <= pos + eps && p >= bp){ bp = p; best = i; }
+    }
+    return best;
+  }
+
+  // 지금 읽는 절을 짚어 준다. into 가 참이면 그 줄이 패널 안에 보이게 굴린다
+  // (바깥 스크롤은 건드리지 않으려고 패널의 scrollTop 만 직접 옮긴다).
+  function tocMark(into){
+    var i = tocHere();
+    if (i !== tocCur){
+      if (tocCur >= 0 && tocNodes[tocCur]){
+        tocNodes[tocCur].classList.remove('cur');
+        tocNodes[tocCur].removeAttribute('aria-current');
+      }
+      tocCur = i;
+      if (i >= 0 && tocNodes[i]){
+        tocNodes[i].classList.add('cur');
+        tocNodes[i].setAttribute('aria-current', 'true');
+      }
+    }
+    if (!into || tocCur < 0 || !tocNodes[tocCur]) return;
+    var n  = tocNodes[tocCur];
+    var nr = n.getBoundingClientRect(), br = tocList.getBoundingClientRect();
+    // 그 줄이 든 구획의 머리는 맨 위에 붙어 있다. 그 높이만큼 패널 위쪽은 이미
+    // 가려진 것으로 치지 않으면, 머리 뒤에 숨은 줄을 "보인다"고 잘못 보게 된다.
+    var sec = n.closest ? n.closest('.tocsec') : null;
+    var hd  = sec ? sec.firstElementChild : null;
+    var pad = (hd && hd !== n) ? hd.offsetHeight : 0;
+    if (nr.top < br.top + pad || nr.bottom > br.bottom)
+      tocList.scrollTop += (nr.top - br.top - pad) - Math.max(0, (br.height - pad - nr.height) / 2);
+  }
+
+  function tocFirst(){
+    for (var i=0;i<tocNodes.length;i++) if (tocNodes[i].tagName === 'BUTTON') return i;
+    return -1;
+  }
+  // 목록 안에서는 화살표로 오간다. 그래서 탭 자리는 짚어 둔 한 줄만 갖는다.
+  function tocRove(i){
+    for (var k=0;k<tocNodes.length;k++)
+      if (tocNodes[k].tagName === 'BUTTON') tocNodes[k].tabIndex = (k === i ? 0 : -1);
+  }
+  function tocStops(){
+    var a = [tocX];
+    for (var k=0;k<tocNodes.length;k++) if (tocNodes[k].tabIndex === 0) a.push(tocNodes[k]);
+    return a;
+  }
+
+  /* 서랍이 드나드는 동안의 상태는 tocOpen 하나만 본다. 열면 hidden 을 먼저 풀고
+     (한 번 재워서 시작 자리를 잡은 뒤) .in 을 붙이고, 닫으면 .in 만 떼었다가
+     다 나간 뒤에 hidden 을 도로 씌운다 — 닫힌 패널이 포커스·스크린리더·
+     elementFromPoint 어디에도 남지 않게. transitionend 가 오지 않는 경우
+     (움직임을 꺼 뒀거나 탭이 뒤에 있었거나)를 대비해 타이머도 같이 건다.
+     어느 쪽이 먼저 오든 하는 일은 같고, 그 사이 다시 열렸으면 아무것도 안 한다. */
+  var tocStill = window.matchMedia ? window.matchMedia('(prefers-reduced-motion:reduce)') : null;
+  var tocEnd = null;
+
+  function tocDisarm(){
+    if (!tocEnd) return;
+    clearTimeout(tocEnd.timer);
+    tocEl.removeEventListener('transitionend', tocEnd.on);
+    tocEnd = null;
+  }
+  function tocGone(){
+    tocDisarm();
+    if (tocOpen) return;                          // 나가는 중에 도로 열었으면 그대로 둔다
+    tocEl.hidden = true; tocVeil.hidden = true;
+  }
+  function tocArm(){
+    tocDisarm();
+    if (tocStill && tocStill.matches){ tocGone(); return; }
+    var on = function(e){ if (e.target === tocEl && e.propertyName === 'transform') tocGone(); };
+    tocEnd = { on:on, timer:setTimeout(tocGone, 400) };
+    tocEl.addEventListener('transitionend', on);
+  }
+
+  function openToc(){
+    var rows = tocRows();
+    if (tocOpen || !rows || !rows.length) return;
+    if (tocLang !== lang) tocBuild();
+    tocOpen = true;
+    tocDisarm();                                  // 닫히는 중이었다면 그 예약을 거둔다
+    tocVeil.hidden = false; tocEl.hidden = false;
+    void tocEl.offsetWidth;                       // 방금 푼 hidden 에서 들어오는 길을 살린다
+    tocEl.classList.add('in'); tocVeil.classList.add('in');
+    tocBtn.setAttribute('aria-expanded', 'true');
+    tocMark(true);
+    var i = (tocCur >= 0 && tocNodes[tocCur] && tocNodes[tocCur].tagName === 'BUTTON') ? tocCur : tocFirst();
+    tocRove(i);
+    (i >= 0 ? tocNodes[i] : tocX).focus();
+  }
+
+  function closeToc(back){
+    if (!tocOpen) return;
+    tocOpen = false;
+    tocEl.classList.remove('in'); tocVeil.classList.remove('in');
+    tocBtn.setAttribute('aria-expanded', 'false');
+    // 패널 안(또는 배경막)에 있던 포커스만 버튼으로 돌려준다. 아직 나가는 중이라
+    // 포커스가 그 안에 남아 있을 수 있으므로, 사라지기를 기다리지 않고 지금 옮긴다.
+    var a = document.activeElement;
+    if (back !== false && (!a || a === document.body || a === tocVeil || tocEl.contains(a)))
+      if (!tocBtn.disabled) tocBtn.focus();
+    tocArm();
+  }
+
+  function tocGo(i){
+    var rows = tocRows();
+    if (!rows || !rows[i] || rows[i].pos === null || !pageEls.length) return;
+    var pos = Math.max(0, Math.min(pageEls.length - 0.001, rows[i].pos));
+    closeToc();
+    goTo(Math.floor(pos) + 1, pos - Math.floor(pos));   // 쪽 표시·저장은 goTo/스크롤이 맡는다
+    savePos();
+  }
+
+  tocBtn.addEventListener('click', function(){ tocOpen ? closeToc() : openToc(); });
+  tocX.addEventListener('click', function(){ closeToc(); });
+  tocVeil.addEventListener('click', function(){ closeToc(); });
+  tocList.addEventListener('click', function(e){
+    var n = e.target.closest ? e.target.closest('button.tocitem') : null;
+    if (n) tocGo(parseInt(n.dataset.i, 10));
+  });
+  document.addEventListener('keydown', function(e){
+    if (!tocOpen) return;
+    if (e.key === 'Escape'){ e.preventDefault(); closeToc(); return; }
+    if (e.key === 'Tab'){                              // 열려 있는 동안은 패널 안에서만 돈다
+      var s = tocStops();
+      if (!s.length) return;
+      var at = s.indexOf(document.activeElement);
+      var to = e.shiftKey ? (at <= 0 ? s.length - 1 : at - 1) : (at === s.length - 1 ? 0 : at + 1);
+      e.preventDefault(); s[to].focus();
+      return;
+    }
+    var here = tocNodes.indexOf(document.activeElement);
+    if (here < 0) return;
+    var step = 0, to = -1;
+    if (e.key === 'ArrowDown') step = 1;
+    else if (e.key === 'ArrowUp') step = -1;
+    else if (e.key === 'Home') to = tocFirst();
+    else if (e.key === 'End'){ for (var k=tocNodes.length-1;k>=0;k--) if (tocNodes[k].tagName === 'BUTTON'){ to = k; break; } }
+    else return;
+    if (step) for (var j=here+step; j>=0 && j<tocNodes.length; j+=step)
+      if (tocNodes[j].tagName === 'BUTTON'){ to = j; break; }
+    e.preventDefault();
+    if (to >= 0){ tocRove(to); tocNodes[to].focus(); }
+  });
+
+  /* ---------- 문서 열기 ---------- */
+  function openDoc(l, target){
+    // 불러오는 중에 다른 언어를 누르면 그 클릭을 버리지 않고 기억해 두었다가
+    // 지금 것이 끝나는 대로 이어서 처리한다. 예전에는 조용히 무시돼서
+    // 마지막에 누른 언어가 아닌 쪽이 떠 있는 일이 있었다.
+    if (busy){ pending = { l:l, target:target }; return Promise.resolve(); }
+    busy = true;
+
+    // 새 판의 책갈피를 다 읽기 전까지는 목차 버튼이 지난 판을 가리킨다. 그동안은
+    // 못 누르게 막되(보이지 않고 잡히지도 않게), 자리는 그대로 두어 언어 토글이
+    // 움직이지 않게 한다. 목차를 열어 둔 채로 언어를 바꾼 경우에는 패널을 그 자리에서
+    // 갈아 끼우므로(tocSync) 패널의 주인인 버튼도 그대로 둔다 — 그때 버튼이 하는 일은
+    // "닫기" 뿐이라 지난 판을 짚을 일이 없다.
+    if (!tocOpen) tocBtnUsable(false);
+
+    if (lang) savePos();
+    var where = lang ? whereAmI() : null;
+
+    lang = l;
+    seg.dataset.lang = l;
+    btnEn.setAttribute('aria-pressed', String(l === 'en'));
+    btnKo.setAttribute('aria-pressed', String(l === 'ko'));
+    ls(function(){ localStorage.setItem(LS_LANG, l); });
+    document.documentElement.lang = (l === 'ko' ? 'ko' : 'en');
+
+    var url = FILES[l] + '?v=' + encodeURIComponent(manifest.version);
+    dl.href = url; dl.setAttribute('download', FILES[l]);
+
+    // 이전 판을 그리던 일은 멈추고, 떠 둔 그림들은 놓아준다.
+    gen++; queue = [];
+    if (active && active.task){ try { active.task.cancel(); } catch(e){} }
+    active = null;
+    for (var j=0;j<pageEls.length;j++){
+      if (pageEls[j].dataset.url) URL.revokeObjectURL(pageEls[j].dataset.url);
+    }
+
+    if (io) io.disconnect();
+    var old = pdfDoc; pdfDoc = null;
+    if (old) { try { old.destroy(); } catch(e){} }
+    pageEls = []; viewer.innerHTML = ''; lastWidth = 0;
+
+    return pdfjsLib.getDocument({
+      url: url,
+      cMapUrl: PDFJS_DATA + 'cmaps/',
+      cMapPacked: true,
+      standardFontDataUrl: PDFJS_DATA + 'standard_fonts/'
+    }).promise.then(function(doc){
+      pdfDoc = doc;
+      return doc.getPage(1).then(function(p1){
+        var v = p1.getViewport({ scale:1 });
+        var frag = document.createDocumentFragment();
+        for (var n = 1; n <= doc.numPages; n++){
+          var el = document.createElement('div');
+          el.className = 'page';
+          el.dataset.page = String(n);
+          el.dataset.state = '';
+          el.id = 'p' + n;
+          el.style.aspectRatio = v.width + ' / ' + v.height;
+          frag.appendChild(el);
+          pageEls.push(el);
+        }
+        viewer.appendChild(frag);
+        lastWidth = pageEls[0].clientWidth;
+
+        makeObserver();
+        for (var i=0;i<pageEls.length;i++) io.observe(pageEls[i]);
+
+        // 대응표는 판마다 한 번만 만들면 된다. 처음 여는 판에서도 미리 만들어 둔다 —
+        // 나중에 언어를 눌렀을 때 "어느 절을 읽고 있었나"를 답하려면 필요하다.
+        var ready = anchors[l] ? Promise.resolve(anchors[l])
+                               : buildAnchors(doc).then(function(a){ return (anchors[l] = a); });
+        return ready.then(function(){
+          var want = target;
+          if (!want && where) want = locate(where, l);
+          if (!want){
+            var saved = ls(function(){ return JSON.parse(localStorage.getItem(LS_POS + l) || 'null'); });
+            if (saved && saved.p) want = saved;
+          }
+          curPage = 1;
+          if (want) goTo(want.p, want.o || 0);
+          paintIndicator();
+          tocSync();                                    // 목차는 늘 지금 판의 책갈피를 보여 준다
+          busy = false;
+          drainPending();
+        });
+      });
+    }).catch(function(err){
+      busy = false; pdfDoc = null;
+      tocSync();
+      console.error('pdf load failed', err);
+      quiet('강의노트 PDF를 불러오지 못했습니다. 잠시 후 새로고침해 주세요.',
+            FILES[l] + ' 를 읽을 수 없습니다.');
+      drainPending();
+    });
+  }
+
+  function drainPending(){
+    if (!pending) return;
+    var q = pending; pending = null;
+    if (q.l !== lang || q.target) openDoc(q.l, q.target);
+  }
+
+  /* ---------- 시작 ---------- */
+  function press(l){
+    // 누른 즉시 손잡이를 옮겨 놓는다. 실제 전환은 openDoc 이 (필요하면 대기 후) 끝낸다.
+    seg.dataset.lang = l;
+    btnEn.setAttribute('aria-pressed', String(l === 'en'));
+    btnKo.setAttribute('aria-pressed', String(l === 'ko'));
+    if (lang !== l || pending) openDoc(l, null);
+  }
+  btnEn.addEventListener('click', function(){ press('en'); });
+  btnKo.addEventListener('click', function(){ press('ko'); });
+
+  if (typeof pdfjsLib === 'undefined'){
+    quiet('PDF 뷰어를 불러오지 못했습니다. 네트워크 연결을 확인하고 새로고침해 주세요.');
+    return;
+  }
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/' + PDFJS_VERSION + '/pdf.worker.min.js';
+
+  fetch('manifest.json', { cache:'no-store' }).then(function(r){
+    if (!r.ok) throw new Error('manifest HTTP ' + r.status);
+    return r.json();
+  }).then(function(m){
+    manifest = m;
+    updatedEl.textContent = m.updated || '';
+    var pages = m.pages || {};
+    var koOk = pages.ko !== null && pages.ko !== undefined;
+    var enOk = pages.en !== null && pages.en !== undefined;
+    if (!koOk && !enOk){ quiet('아직 올라온 강의노트가 없습니다.'); return; }
+
+    // 없는 쪽은 눌러도 소용없으니 잠근다.
+    if (!koOk){ btnKo.disabled = true; btnKo.title = '한국어판 준비 중입니다'; }
+    if (!enOk){ btnEn.disabled = true; btnEn.title = 'English edition not available yet'; }
+
+    var want = ls(function(){ return localStorage.getItem(LS_LANG); }) || DEFAULT_LANG;
+    if (want !== 'ko' && want !== 'en') want = DEFAULT_LANG;
+    if (want === 'ko' && !koOk) want = 'en';
+    if (want === 'en' && !enOk) want = 'ko';
+
+    var h = parseHash();
+    return openDoc(want, h ? { p:h, o:0 } : null).then(function(){
+      // 저장된 언어로 자리를 잡은 다음부터 미끄러지게 한다.
+      // 배경 탭에서는 rAF 가 아예 안 돌기 때문에 타이머로도 한 번 더 건다.
+      var armed = false;
+      function armKnob(){ if (armed) return; armed = true; seg.classList.remove('noanim'); }
+      requestAnimationFrame(armKnob);
+      setTimeout(armKnob, 400);
+    });
+  }).catch(function(err){
+    console.error('manifest load failed', err);
+    quiet('강의노트 정보를 불러오지 못했습니다. 잠시 후 새로고침해 주세요.',
+          'manifest.json 을 읽을 수 없습니다.');
+  });
+})();
+</script>
+</body>
+</html>
